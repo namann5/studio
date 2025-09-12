@@ -15,7 +15,7 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [lastBotMessage, setLastBotMessage] = useState("Hey, it's me. I'm here to listen. Tell me what's on your mind. Just tap the button to talk.");
+  const [lastBotMessage, setLastBotMessage] = useState("Hey, it's me. I'm here and ready to listen. Tell me everything that's on your mind.");
   const [currentMood, setCurrentMood] = useState("neutral");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -31,6 +31,12 @@ export function ChatView() {
   }
   
   const { speak, cancel, speaking } = useSpeechSynthesis({ onEnd: onSpeechEnd });
+
+  useEffect(() => {
+    // Start conversation automatically on component mount
+    speak({ text: lastBotMessage });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addMessage = (role: "user" | "assistant", content: string) => {
     const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
@@ -117,7 +123,7 @@ export function ChatView() {
             </p>
         </div>
         
-        <div className="absolute bottom-10">
+        <div className="absolute bottom-10 opacity-0 pointer-events-none">
             <VoiceRecorder 
                 ref={voiceRecorderRef}
                 onAudioSubmit={handleVoiceSubmit} 
