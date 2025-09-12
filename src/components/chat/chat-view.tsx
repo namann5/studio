@@ -27,7 +27,9 @@ export function ChatView() {
 
   const onSpeechEnd = () => {
     setLastBotMessage("");
-    voiceRecorderRef.current?.startRecording();
+    if (voiceRecorderRef.current) {
+        voiceRecorderRef.current.startRecording();
+    }
   }
   
   const { speak, cancel, speaking } = useSpeechSynthesis({ onEnd: onSpeechEnd });
