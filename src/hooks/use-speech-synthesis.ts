@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -33,7 +34,7 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const speak = useCallback((options: SpeechOptions) => {
         if (!supported || speaking) return;
 
-        const { text, rate = 1, pitch = 1, volume = 1, voice } = options;
+        const { text, rate = 1, pitch = 1.2, volume = 1, voice } = options;
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = rate;
@@ -44,17 +45,11 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
             utterance.voice = voice;
         } else {
             const voices = window.speechSynthesis.getVoices();
-            // Prioritize a female English voice.
-            const femaleVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha')));
+            // A different set of voices that often sound more natural or expressive on some browsers.
+            const expressiveVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Google US English')));
             
-            if (femaleVoice) {
-                utterance.voice = femaleVoice;
-            } else {
-                // Fallback to a generic Google US English voice, which is often female.
-                const englishVoice = voices.find(v => v.name === 'Google US English');
-                if (englishVoice) {
-                    utterance.voice = englishVoice;
-                }
+            if (expressiveVoice) {
+                utterance.voice = expressiveVoice;
             }
         }
         
