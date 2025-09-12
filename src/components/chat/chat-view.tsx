@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Bot, BrainCircuit, Loader2, Send, AlertTriangle } from "lucide-react";
+import { Bot, BrainCircuit, Loader2, AlertTriangle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { VoiceRecorder } from "./voice-recorder";
@@ -12,12 +11,12 @@ import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar } from "../ui/avatar";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
   const [currentMood, setCurrentMood] = useState("neutral");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -42,31 +41,6 @@ export function ChatView() {
       ...prev,
       { id: Date.now().toString(), role, content, timestamp: new Date() },
     ]);
-  };
-
-  const handleTextSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isPending) return;
-
-    const userInput = input;
-    addMessage("user", userInput);
-    setInput("");
-    checkForSafetyAlert(userInput);
-
-    startTransition(async () => {
-      try {
-        const response = await getAiResponse(messages, currentMood);
-        addMessage("assistant", response);
-        speak({ text: response });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Could not get a response from the AI.",
-          variant: "destructive"
-        })
-        addMessage("assistant", "Sorry, I'm having trouble connecting. Please try again later.");
-      }
-    });
   };
   
   const handleVoiceSubmit = async (audioBlob: Blob) => {
@@ -135,7 +109,7 @@ export function ChatView() {
             <MessageBubble message={{
                 id: '0',
                 role: 'assistant',
-                content: "Hello, I'm SEISTA AI. I'm here to listen. How are you feeling today?",
+                content: "Hello, I'm SEISTA AI. I'm here to listen. How are you feeling today? Use the microphone to talk to me.",
                 timestamp: new Date()
             }} />
           {messages.map((m) => (
@@ -156,20 +130,8 @@ export function ChatView() {
       </ScrollArea>
 
       <footer className="p-4 border-t bg-background">
-        <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleTextSubmit} className="flex items-center gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message or use the microphone..."
-              autoComplete="off"
-              disabled={isPending}
-            />
-            <VoiceRecorder onAudioSubmit={handleVoiceSubmit} isSpeaking={speaking} stopSpeaking={cancel} disabled={isPending} />
-            <Button type="submit" size="icon" disabled={!input.trim() || isPending}>
-              <Send className="w-5 h-5" />
-            </Button>
-          </form>
+        <div className="max-w-4xl mx-auto flex justify-center items-center">
+          <VoiceRecorder onAudioSubmit={handleVoiceSubmit} isSpeaking={speaking} stopSpeaking={cancel} disabled={isPending} />
         </div>
       </footer>
       <SafetyAlertDialog open={showSafetyAlert} onOpenChange={setShowSafetyAlert} />
