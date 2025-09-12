@@ -143,7 +143,7 @@ export function ChatView() {
             </p>
         </div>
         
-        <div className="absolute bottom-10 opacity-0 pointer-events-none">
+        <div className="absolute bottom-10">
             <VoiceRecorder 
                 ref={voiceRecorderRef}
                 onAudioSubmit={handleVoiceSubmit} 
