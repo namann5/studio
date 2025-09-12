@@ -12,25 +12,70 @@ type Props = {
   onRecordingChange: (isRecording: boolean) => void;
 };
 
+const SILENCE_THRESHOLD = 500; // ms of silence to end recording
+
 export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecording: () => void; }, Props>(
   ({ onAudioSubmit, isSpeaking, stopSpeaking, disabled, onRecordingChange }, ref) => {
     const [recordingStatus, setRecordingStatus] = useState<"idle" | "recording" | "processing">("idle");
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const dataArrayRef = useRef<Uint8Array | null>(null);
 
     useEffect(() => {
       onRecordingChange(recordingStatus === 'recording');
     }, [recordingStatus, onRecordingChange]);
     
-    // Stop recording when component is unmounted
     useEffect(() => {
         return () => {
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
             }
+            if (silenceTimerRef.current) {
+                clearTimeout(silenceTimerRef.current);
+            }
+            if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+              audioContextRef.current.close();
+            }
         }
     }, []);
+
+    const stopRecording = () => {
+      if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+      }
+      if (mediaRecorderRef.current && recordingStatus === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+    };
+
+    const detectSilence = () => {
+      if (analyserRef.current && dataArrayRef.current) {
+          analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+          const isSilent = dataArrayRef.current.every(v => v === 128);
+          if (isSilent) {
+              if (!silenceTimerRef.current) {
+                  silenceTimerRef.current = setTimeout(stopRecording, SILENCE_THRESHOLD);
+              }
+          } else {
+              if (silenceTimerRef.current) {
+                  clearTimeout(silenceTimerRef.current);
+                  silenceTimerRef.current = null;
+              }
+          }
+      }
+      if (recordingStatus === 'recording') {
+        requestAnimationFrame(detectSilence);
+      }
+    }
 
     const startRecording = async () => {
       if (recordingStatus !== "idle" || isSpeaking) return;
@@ -38,6 +83,15 @@ export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecord
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
         setRecordingStatus("recording");
+        
+        audioContextRef.current = new AudioContext();
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        const source = audioContextRef.current.createMediaStreamSource(stream);
+        source.connect(analyserRef.current);
+        analyserRef.current.fftSize = 2048;
+        const bufferLength = analyserRef.current.frequencyBinCount;
+        dataArrayRef.current = new Uint8Array(bufferLength);
+
         mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: "audio/webm" });
         mediaRecorderRef.current.ondataavailable = (event) => {
           audioChunksRef.current.push(event.data);
@@ -48,23 +102,17 @@ export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecord
           onAudioSubmit(audioBlob);
           audioChunksRef.current = [];
           setRecordingStatus("idle");
-          // Stop all tracks on the stream
           if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
           }
         };
         mediaRecorderRef.current.start();
+        requestAnimationFrame(detectSilence);
+
       } catch (err) {
         console.error("Error accessing microphone:", err);
-        // You could show a toast notification here
         setRecordingStatus("idle");
-      }
-    };
-
-    const stopRecording = () => {
-      if (mediaRecorderRef.current && recordingStatus === "recording") {
-        mediaRecorderRef.current.stop();
       }
     };
 

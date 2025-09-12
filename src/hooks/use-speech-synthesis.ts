@@ -44,10 +44,15 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
             utterance.voice = voice;
         } else {
             const voices = window.speechSynthesis.getVoices();
-            // Prefer a Google US English voice if available
-            const preferredVoice = voices.find(v => v.name === 'Google US English');
+            // Prefer a Japanese voice if available for an "anime" feel.
+            const preferredVoice = voices.find(v => v.lang === 'ja-JP' && v.name.includes('Google'));
             if (preferredVoice) {
                 utterance.voice = preferredVoice;
+            } else {
+                const englishVoice = voices.find(v => v.name === 'Google US English');
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                }
             }
         }
         
