@@ -34,7 +34,7 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const speak = useCallback((options: SpeechOptions) => {
         if (!supported || speaking) return;
 
-        const { text, rate = 1, pitch = 1.2, volume = 1, voice } = options;
+        const { text, rate = 1, pitch = 1.3, volume = 1, voice } = options;
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = rate;
@@ -46,7 +46,7 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         } else {
             const voices = window.speechSynthesis.getVoices();
             // A different set of voices that often sound more natural or expressive on some browsers.
-            const expressiveVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Google US English')));
+            const expressiveVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Female')));
             
             if (expressiveVoice) {
                 utterance.voice = expressiveVoice;
