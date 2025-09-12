@@ -78,7 +78,8 @@ export function ChatView() {
                 
                 setCurrentMood(mood);
                 
-                const responseText = await getAiResponse(messages, mood);
+                const conversationHistory = [...messages, { id: 'temp', role: 'user' as const, content: transcription, timestamp: new Date() }];
+                const responseText = await getAiResponse(conversationHistory, mood);
                 addMessage("assistant", responseText);
                 speak({ text: responseText });
             };
@@ -158,8 +159,6 @@ export function ChatView() {
                  <VoiceRecorder 
                     ref={voiceRecorderRef}
                     onAudioSubmit={handleVoiceSubmit} 
-                    isSpeaking={speaking} 
-                    disabled={isPending}
                     onRecordingChange={setIsRecording}
                  />
                  <Button onClick={endConversation} variant="destructive" size="sm">
