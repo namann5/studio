@@ -3,60 +3,61 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Bot, BrainCircuit, Loader2, AlertTriangle } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageBubble } from "./message-bubble";
+import { BrainCircuit, Loader2, AlertTriangle } from "lucide-react";
 import { VoiceRecorder } from "./voice-recorder";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Avatar } from "../ui/avatar";
+import { AiVisualizer } from "./ai-visualizer";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [lastBotMessage, setLastBotMessage] = useState("Hello, I'm SEISTA AI. I'm here to listen. How are you feeling today? Use the microphone to talk to me.");
   const [currentMood, setCurrentMood] = useState("neutral");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
   const { speak, cancel, speaking } = useSpeechSynthesis();
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  const checkForSafetyAlert = (text: string) => {
-    if (safetyKeywords.some(keyword => text.toLowerCase().includes(keyword))) {
-      setShowSafetyAlert(true);
-    }
-  };
+  const [isRecording, setIsRecording] = useState(false);
 
   const addMessage = (role: "user" | "assistant", content: string) => {
-    setMessages(prev => [
-      ...prev,
-      { id: Date.now().toString(), role, content, timestamp: new Date() },
-    ]);
+    const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
+    setMessages(prev => [...prev, newMessage]);
+    if (role === "assistant") {
+      setLastBotMessage(content);
+    }
   };
+
+  const onSpeechEnd = () => {
+    setLastBotMessage("");
+  }
   
   const handleVoiceSubmit = async (audioBlob: Blob) => {
+    setIsRecording(false);
     startTransition(async () => {
         try {
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = async () => {
                 const base64Audio = reader.result as string;
+                addMessage("user", "[Voice Input]");
                 const { mood, confidence, text } = await getInitialMood(base64Audio);
-                checkForSafetyAlert(text);
 
+                if (text) {
+                  const lowercasedText = text.toLowerCase();
+                  if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
+                    setShowSafetyAlert(true);
+                  }
+                }
+                
                 setCurrentMood(mood);
                 
-                const response = await getAiResponse(messages, mood);
-                speak({ text: response });
+                const responseText = await getAiResponse(messages, mood);
+                addMessage("assistant", responseText);
+                speak({ text: responseText, onEnd: onSpeechEnd });
             };
         } catch (error) {
             toast({
@@ -65,7 +66,8 @@ export function ChatView() {
               variant: "destructive"
             })
             const errorResponse = "Sorry, I had trouble understanding that. Could you try again?";
-            speak({ text: errorResponse });
+            addMessage("assistant", errorResponse);
+            speak({ text: errorResponse, onEnd: onSpeechEnd });
         }
     });
   }
@@ -75,7 +77,8 @@ export function ChatView() {
         try {
             const strategies = await getCopingStrategies(messages, currentMood);
             const strategyText = `Here are a few ideas that might help:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
-            speak({ text: strategyText });
+            addMessage("assistant", strategyText);
+            speak({ text: strategyText, onEnd: onSpeechEnd });
         } catch (error) {
             toast({
               title: "Error",
@@ -83,52 +86,40 @@ export function ChatView() {
               variant: "destructive"
             })
             const errorResponse = "I'm having trouble coming up with strategies right now. Let's talk more first.";
-            speak({ text: errorResponse });
+            addMessage("assistant", errorResponse);
+            speak({ text: errorResponse, onEnd: onSpeechEnd });
         }
     });
   }
 
-
   return (
-    <div className="h-screen flex flex-col bg-muted/20">
-      <header className="p-4 border-b flex items-center justify-between bg-background">
-        <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-primary"/>
-            <h1 className="text-xl font-bold font-headline">AI Conversation</h1>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending}>
-            <BrainCircuit className="w-4 h-4 mr-2"/>
-            Coping Strategies
-        </Button>
-      </header>
+    <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
+        <AiVisualizer isSpeaking={speaking} isThinking={isPending} isRecording={isRecording} />
 
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
-        <div className="max-w-4xl mx-auto space-y-6">
-            <MessageBubble message={{
-                id: '0',
-                role: 'assistant',
-                content: "Hello, I'm SEISTA AI. I'm here to listen. How are you feeling today? Use the microphone to talk to me.",
-                timestamp: new Date()
-            }} />
-          {isPending && (
-            <div className="flex items-start gap-4">
-              <Avatar className="w-8 h-8 bg-primary text-primary-foreground flex items-center justify-center">
-                <Bot className="w-5 h-5" />
-              </Avatar>
-              <div className="flex items-center space-x-2">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">SEISTA is thinking...</span>
-              </div>
-            </div>
-          )}
+        <div className="absolute top-0 right-0 p-4">
+            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending || speaking}>
+                <BrainCircuit className="w-4 h-4 mr-2"/>
+                Coping Strategies
+            </Button>
         </div>
-      </ScrollArea>
 
-      <footer className="p-4 border-t bg-background">
-        <div className="max-w-4xl mx-auto flex justify-center items-center">
-          <VoiceRecorder onAudioSubmit={handleVoiceSubmit} isSpeaking={speaking} stopSpeaking={cancel} disabled={isPending} />
+        <div className="w-full max-w-2xl text-center px-4">
+            <p className="text-lg md:text-xl text-foreground/80 min-h-[6em] transition-opacity duration-300"
+               style={{ opacity: speaking ? 1 : 0 }}
+            >
+                {lastBotMessage}
+            </p>
         </div>
-      </footer>
+        
+        <div className="absolute bottom-10">
+            <VoiceRecorder 
+                onAudioSubmit={handleVoiceSubmit} 
+                isSpeaking={speaking} 
+                stopSpeaking={cancel} 
+                disabled={isPending}
+                onRecordingChange={setIsRecording}
+            />
+        </div>
       <SafetyAlertDialog open={showSafetyAlert} onOpenChange={setShowSafetyAlert} />
     </div>
   );
