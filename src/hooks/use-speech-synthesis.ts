@@ -44,11 +44,13 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
             utterance.voice = voice;
         } else {
             const voices = window.speechSynthesis.getVoices();
-            // Prefer a Japanese voice if available for an "anime" feel.
-            const preferredVoice = voices.find(v => v.lang === 'ja-JP' && v.name.includes('Google'));
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
+            // Prioritize a female English voice.
+            const femaleVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha')));
+            
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
             } else {
+                // Fallback to a generic Google US English voice, which is often female.
                 const englishVoice = voices.find(v => v.name === 'Google US English');
                 if (englishVoice) {
                     utterance.voice = englishVoice;
