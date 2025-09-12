@@ -30,7 +30,7 @@ const prompt = ai.definePrompt({
   Conversation History:
   {{{conversationHistory}}}
   
-  Based on the history and mood, provide a thoughtful, multi-paragraph response that is gentle, warm, and emotionally resonant. Be present and listen. Your response should be text only.`,
+  Based on the history and mood, provide a short, caring response that is gentle, warm, and emotionally resonant. Be present and listen. Your response should be text only.`,
 });
 
 export const generateChatResponse = ai.defineFlow(
