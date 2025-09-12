@@ -51,13 +51,11 @@ export function ChatView() {
             reader.onloadend = async () => {
                 const base64Audio = reader.result as string;
                 const { mood, confidence, text } = await getInitialMood(base64Audio);
-                addMessage("user", `(Voice) ${text}`);
                 checkForSafetyAlert(text);
 
                 setCurrentMood(mood);
                 
                 const response = await getAiResponse(messages, mood);
-                addMessage("assistant", response);
                 speak({ text: response });
             };
         } catch (error) {
@@ -66,18 +64,17 @@ export function ChatView() {
               description: "Could not process voice input.",
               variant: "destructive"
             })
-            addMessage("assistant", "Sorry, I had trouble understanding that. Could you try again?");
+            const errorResponse = "Sorry, I had trouble understanding that. Could you try again?";
+            speak({ text: errorResponse });
         }
     });
   }
 
   const handleGetStrategies = () => {
-    addMessage("assistant", "Let me think of some coping strategies for you...");
     startTransition(async () => {
         try {
             const strategies = await getCopingStrategies(messages, currentMood);
             const strategyText = `Here are a few ideas that might help:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
-            addMessage("assistant", strategyText);
             speak({ text: strategyText });
         } catch (error) {
             toast({
@@ -85,7 +82,8 @@ export function ChatView() {
               description: "Could not generate coping strategies.",
               variant: "destructive"
             })
-            addMessage("assistant", "I'm having trouble coming up with strategies right now. Let's talk more first.");
+            const errorResponse = "I'm having trouble coming up with strategies right now. Let's talk more first.";
+            speak({ text: errorResponse });
         }
     });
   }
@@ -112,9 +110,6 @@ export function ChatView() {
                 content: "Hello, I'm SEISTA AI. I'm here to listen. How are you feeling today? Use the microphone to talk to me.",
                 timestamp: new Date()
             }} />
-          {messages.map((m) => (
-            <MessageBubble key={m.id} message={m} />
-          ))}
           {isPending && (
             <div className="flex items-start gap-4">
               <Avatar className="w-8 h-8 bg-primary text-primary-foreground flex items-center justify-center">
