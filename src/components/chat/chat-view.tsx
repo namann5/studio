@@ -22,6 +22,7 @@ export function ChatView() {
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
+  const isMounted = useRef(false);
   
   const voiceRecorderRef = useRef<{ startRecording: () => void; stopRecording: () => void }>(null);
 
@@ -35,7 +36,12 @@ export function ChatView() {
   const { speak, cancel, speaking } = useSpeechSynthesis({ onEnd: onSpeechEnd });
 
   useEffect(() => {
-    speak({ text: lastBotMessage });
+    // This effect should only run once after the component mounts.
+    if (!isMounted.current) {
+      isMounted.current = true;
+      // The AI speaks its initial greeting. The onEnd callback will trigger the recording.
+      speak({ text: lastBotMessage });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
