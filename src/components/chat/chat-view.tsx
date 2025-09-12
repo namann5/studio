@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useTransition } from "react";
+import Image from "next/image";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, Loader2, AlertTriangle } from "lucide-react";
+import { BrainCircuit, AlertTriangle } from "lucide-react";
 import { VoiceRecorder } from "./voice-recorder";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { AiVisualizer } from "./ai-visualizer";
+import { cn } from "@/lib/utils";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
@@ -26,14 +27,12 @@ export function ChatView() {
 
   const onSpeechEnd = () => {
     setLastBotMessage("");
-    // Automatically start recording after AI finishes speaking
     voiceRecorderRef.current?.startRecording();
   }
   
   const { speak, cancel, speaking } = useSpeechSynthesis({ onEnd: onSpeechEnd });
 
   useEffect(() => {
-    // Start conversation automatically on component mount
     speak({ text: lastBotMessage });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -106,7 +105,20 @@ export function ChatView() {
 
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
-        <AiVisualizer isSpeaking={speaking} isThinking={isPending} isRecording={isRecording} />
+        <div className="relative w-64 h-64">
+          <Image 
+            src="/siesta.jpg"
+            alt="AI Assistant"
+            width={256}
+            height={256}
+            className={cn(
+              "rounded-full object-cover shadow-lg transition-transform duration-500",
+              speaking ? "scale-110" : "scale-100",
+              isPending ? "animate-pulse" : ""
+            )}
+            priority
+          />
+        </div>
 
         <div className="absolute top-0 right-0 p-4">
             <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending || speaking}>
@@ -115,7 +127,7 @@ export function ChatView() {
             </Button>
         </div>
 
-        <div className="w-full max-w-2xl text-center px-4">
+        <div className="w-full max-w-2xl text-center px-4 mt-8">
             <p className="text-lg md:text-xl text-foreground/80 min-h-[6em] transition-opacity duration-300"
                style={{ opacity: speaking || isPending ? 1 : 0 }}
             >
