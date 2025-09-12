@@ -25,24 +25,15 @@ export async function getAiResponse(history: Message[], currentMood: string) {
     return response.chatResponse;
 }
 
-export async function getCopingStrategies(history: Message[], currentMood: string) {
+export async function getCopingStrategies(history: Message[], currentMood:string) {
     const historyString = history.map(m => `${m.role}: ${m.content}`).join('\\n');
     const response = await runWithRetry(() => generateCopingStrategies({ conversationHistory: historyString, currentMood }));
     return response.copingStrategies;
 }
 
 export async function getInitialMood(voiceInput: string) {
-    // A bug in genkit or underlying model seems to not process audio if it's not a real prompt.
-    // The prompt is "Analyze the user's voice input and determine their mood."
-    // We get a weird error about `toJSON` if we don't have some text.
-    // We are expecting a transcription back, but the flow doesn't do that.
-    // For now, let's just mock the transcription part.
     const response = await runWithRetry(() => assessInitialMood({ voiceInput }));
-    
-    // Mocking transcription since the flow doesn't provide it
-    const mockTranscription = "User expressed feelings through voice.";
-
-    return { ...response, text: mockTranscription };
+    return { ...response, text: response.transcription };
 }
 
 export async function getContextualMood(history: Message[]) {
