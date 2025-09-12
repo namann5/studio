@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useTransition } from "react";
 import Image from "next/image";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, AlertTriangle } from "lucide-react";
+import { BrainCircuit, AlertTriangle, Play, Square } from "lucide-react";
 import { VoiceRecorder } from "./voice-recorder";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
@@ -16,34 +16,38 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionState, setSessionState] = useState<"idle" | "active" | "stopped">("idle");
   const [lastBotMessage, setLastBotMessage] = useState("Hey, it's me. I'm here and ready to listen. Tell me everything that's on your mind.");
   const [currentMood, setCurrentMood] = useState("neutral");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
-  const isMounted = useRef(false);
   
   const voiceRecorderRef = useRef<{ startRecording: () => void; stopRecording: () => void }>(null);
 
   const onSpeechEnd = () => {
     setLastBotMessage("");
-    if (voiceRecorderRef.current) {
-        voiceRecorderRef.current.startRecording();
+    if (sessionState === "active" && voiceRecorderRef.current) {
+      voiceRecorderRef.current.startRecording();
     }
   }
   
   const { speak, cancel, speaking } = useSpeechSynthesis({ onEnd: onSpeechEnd });
 
-  useEffect(() => {
-    // This effect should only run once after the component mounts.
-    if (!isMounted.current) {
-      isMounted.current = true;
-      // The AI speaks its initial greeting. The onEnd callback will trigger the recording.
-      speak({ text: lastBotMessage });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const startConversation = () => {
+    setSessionState("active");
+    speak({ text: lastBotMessage });
+  };
+  
+  const endConversation = () => {
+      cancel();
+      if (voiceRecorderRef.current) {
+          voiceRecorderRef.current.stopRecording();
+      }
+      setSessionState("stopped");
+      setLastBotMessage("Our session has ended. Press 'Start' to begin again whenever you're ready.");
+  }
 
   const addMessage = (role: "user" | "assistant", content: string) => {
     const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
@@ -55,6 +59,8 @@ export function ChatView() {
   
   const handleVoiceSubmit = async (audioBlob: Blob) => {
     setIsRecording(false);
+    if (sessionState !== 'active') return;
+
     startTransition(async () => {
         try {
             const reader = new FileReader();
@@ -62,10 +68,10 @@ export function ChatView() {
             reader.onloadend = async () => {
                 const base64Audio = reader.result as string;
                 addMessage("user", "[Voice Input]");
-                const { mood, confidence, text } = await getInitialMood(base64Audio);
+                const { mood, confidence, transcription } = await getInitialMood(base64Audio);
 
-                if (text) {
-                  const lowercasedText = text.toLowerCase();
+                if (transcription) {
+                  const lowercasedText = transcription.toLowerCase();
                   if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
                     setShowSafetyAlert(true);
                   }
@@ -122,6 +128,7 @@ export function ChatView() {
             className={cn(
               "rounded-full object-cover shadow-lg transition-transform duration-500",
               speaking ? "scale-110" : "scale-100",
+              isRecording ? "ring-4 ring-primary ring-offset-4 ring-offset-background" : "",
               isPending ? "animate-pulse" : ""
             )}
             priority
@@ -129,29 +136,43 @@ export function ChatView() {
         </div>
 
         <div className="absolute top-0 right-0 p-4">
-            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending || speaking}>
+            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending || speaking || sessionState !== 'active'}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
                 Coping Strategies
             </Button>
         </div>
 
         <div className="w-full max-w-2xl text-center px-4 mt-8">
-            <p className="text-lg md:text-xl text-foreground/80 min-h-[6em] transition-opacity duration-300"
-               style={{ opacity: speaking || isPending ? 1 : 0 }}
-            >
+            <p className="text-lg md:text-xl text-foreground/80 min-h-[6em] transition-opacity duration-300">
                 {lastBotMessage}
             </p>
         </div>
         
-        <div className="absolute bottom-10">
-            <VoiceRecorder 
-                ref={voiceRecorderRef}
-                onAudioSubmit={handleVoiceSubmit} 
-                isSpeaking={speaking} 
-                stopSpeaking={cancel} 
-                disabled={isPending}
-                onRecordingChange={setIsRecording}
-            />
+        <div className="absolute bottom-10 flex flex-col items-center gap-4">
+            {sessionState === "idle" && (
+                <Button onClick={startConversation} size="lg" className="rounded-full">
+                    <Play className="mr-2" /> Start Conversation
+                </Button>
+            )}
+            {sessionState === "active" && (
+                <>
+                 <VoiceRecorder 
+                    ref={voiceRecorderRef}
+                    onAudioSubmit={handleVoiceSubmit} 
+                    isSpeaking={speaking} 
+                    disabled={isPending}
+                    onRecordingChange={setIsRecording}
+                 />
+                 <Button onClick={endConversation} variant="destructive" size="sm">
+                    <Square className="mr-2" /> End Conversation
+                 </Button>
+                </>
+            )}
+             {sessionState === "stopped" && (
+                <Button onClick={() => window.location.reload()} size="lg" className="rounded-full">
+                    <Play className="mr-2" /> Start New Session
+                </Button>
+            )}
         </div>
       <SafetyAlertDialog open={showSafetyAlert} onOpenChange={setShowSafetyAlert} />
     </div>

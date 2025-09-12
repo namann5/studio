@@ -1,21 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
-import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Square, VolumeX, Loader2 } from "lucide-react";
 
 type Props = {
   onAudioSubmit: (audioBlob: Blob) => void;
   isSpeaking: boolean;
-  stopSpeaking: () => void;
   disabled: boolean;
   onRecordingChange: (isRecording: boolean) => void;
 };
 
-const SILENCE_THRESHOLD = 500; // ms of silence to end recording
+const SILENCE_THRESHOLD = 1000; // ms of silence to end recording
 
 export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecording: () => void; }, Props>(
-  ({ onAudioSubmit, isSpeaking, stopSpeaking, disabled, onRecordingChange }, ref) => {
+  ({ onAudioSubmit, isSpeaking, disabled, onRecordingChange }, ref) => {
     const [recordingStatus, setRecordingStatus] = useState<"idle" | "recording" | "processing">("idle");
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -48,13 +46,18 @@ export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecord
           clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = null;
       }
-      if (mediaRecorderRef.current && recordingStatus === "recording") {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         mediaRecorderRef.current.stop();
       }
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close();
         audioContextRef.current = null;
       }
+      if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+      }
+      setRecordingStatus("idle");
     };
 
     const detectSilence = () => {
@@ -72,7 +75,7 @@ export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecord
               }
           }
       }
-      if (recordingStatus === 'recording') {
+      if (mediaRecorderRef.current?.state === 'recording') {
         requestAnimationFrame(detectSilence);
       }
     }
@@ -94,12 +97,16 @@ export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecord
 
         mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: "audio/webm" });
         mediaRecorderRef.current.ondataavailable = (event) => {
-          audioChunksRef.current.push(event.data);
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
         };
         mediaRecorderRef.current.onstop = () => {
           setRecordingStatus("processing");
-          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-          onAudioSubmit(audioBlob);
+          if(audioChunksRef.current.length > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+            onAudioSubmit(audioBlob);
+          }
           audioChunksRef.current = [];
           setRecordingStatus("idle");
           if (streamRef.current) {
@@ -121,32 +128,7 @@ export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecord
       stopRecording,
     }));
 
-    const handleMicClick = () => {
-      if (isSpeaking) {
-          stopSpeaking();
-          return;
-      }
-      if (recordingStatus === "idle") {
-        startRecording();
-      } else {
-        stopRecording();
-      }
-    };
-    
-    return (
-      <Button 
-          onClick={handleMicClick} 
-          size="icon"
-          className="w-20 h-20 rounded-full"
-          variant={recordingStatus === "recording" ? "destructive" : "outline"} 
-          disabled={disabled || recordingStatus === 'processing'}
-      >
-        {isSpeaking && <VolumeX className="w-8 h-8" />}
-        {!isSpeaking && recordingStatus === "idle" && <Mic className="w-8 h-8" />}
-        {!isSpeaking && recordingStatus === "recording" && <Square className="w-8 h-8 animate-pulse" />}
-        {!isSpeaking && recordingStatus === "processing" && <Loader2 className="w-8 h-8 animate-spin" />}
-      </Button>
-    );
+    return null; // This component no longer renders a button
   }
 );
 VoiceRecorder.displayName = "VoiceRecorder";
