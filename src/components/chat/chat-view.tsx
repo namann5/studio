@@ -27,7 +27,6 @@ export function ChatView() {
   const voiceRecorderRef = useRef<{ startRecording: () => void; stopRecording: () => void }>(null);
 
   const onSpeechEnd = () => {
-    setLastBotMessage("");
     if (sessionState === "active" && voiceRecorderRef.current) {
       voiceRecorderRef.current.startRecording();
     }
@@ -121,7 +120,7 @@ export function ChatView() {
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
         <div className="relative w-64 h-64">
           <Image 
-            src="/siesta.jpg"
+            src="/seista.jpeg"
             alt="AI Assistant"
             width={256}
             height={256}
