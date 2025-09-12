@@ -18,18 +18,30 @@ type UseSpeechSynthesisOptions = {
 
 export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const [speaking, setSpeaking] = useState(false);
+    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [supported, setSupported] = useState(false);
     const onEndRef = useRef(opts?.onEnd);
 
-    useEffect(() => {
-        onEndRef.current = opts?.onEnd;
-    }, [opts?.onEnd]);
+    const populateVoiceList = useCallback(() => {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            const newVoices = window.speechSynthesis.getVoices();
+            setVoices(newVoices);
+        }
+    }, []);
     
     useEffect(() => {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
             setSupported(true);
+            populateVoiceList();
+            window.speechSynthesis.onvoiceschanged = populateVoiceList;
         }
-    }, []);
+
+        return () => {
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
+        }
+    }, [populateVoiceList]);
 
     const speak = useCallback((options: SpeechOptions) => {
         if (!supported || speaking) return;
@@ -44,12 +56,11 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         if (voice) {
             utterance.voice = voice;
         } else {
-            const voices = window.speechSynthesis.getVoices();
-            // A different set of voices that often sound more natural or expressive on some browsers.
-            const expressiveVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Samantha') || v.name.includes('Zira') || v.name.includes('Female')));
+            // Find a suitable female voice. This is more robust.
+            const femaleVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira')));
             
-            if (expressiveVoice) {
-                utterance.voice = expressiveVoice;
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
             }
         }
         
@@ -72,7 +83,7 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         // Cancel any previous speech to prevent overlap
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
-    }, [supported, speaking]);
+    }, [supported, speaking, voices]);
 
     const cancel = useCallback(() => {
         if (!supported) return;
