@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 type SpeechOptions = {
     text: string;
@@ -8,12 +8,21 @@ type SpeechOptions = {
     pitch?: number;
     volume?: number;
     voice?: SpeechSynthesisVoice;
+};
+
+type UseSpeechSynthesisOptions = {
     onEnd?: () => void;
 };
 
-export const useSpeechSynthesis = () => {
+
+export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const [speaking, setSpeaking] = useState(false);
     const [supported, setSupported] = useState(false);
+    const onEndRef = useRef(opts?.onEnd);
+
+    useEffect(() => {
+        onEndRef.current = opts?.onEnd;
+    }, [opts?.onEnd]);
     
     useEffect(() => {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -24,7 +33,7 @@ export const useSpeechSynthesis = () => {
     const speak = useCallback((options: SpeechOptions) => {
         if (!supported || speaking) return;
 
-        const { text, rate = 1, pitch = 1, volume = 1, voice, onEnd } = options;
+        const { text, rate = 1, pitch = 1, volume = 1, voice } = options;
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = rate;
@@ -48,7 +57,9 @@ export const useSpeechSynthesis = () => {
 
         utterance.onend = () => {
             setSpeaking(false);
-            if (onEnd) onEnd();
+            if (onEndRef.current) {
+                onEndRef.current();
+            }
         };
 
         utterance.onerror = (event) => {
@@ -56,14 +67,16 @@ export const useSpeechSynthesis = () => {
             setSpeaking(false);
         };
         
+        // Cancel any previous speech to prevent overlap
+        window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
     }, [supported, speaking]);
 
     const cancel = useCallback(() => {
-        if (!supported || !speaking) return;
-        window.speechSynthesis.cancel();
+        if (!supported) return;
         setSpeaking(false);
-    }, [supported, speaking]);
+        window.speechSynthesis.cancel();
+    }, [supported]);
 
     // Cleanup on unmount
     useEffect(() => {

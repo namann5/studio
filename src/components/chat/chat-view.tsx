@@ -15,13 +15,22 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [lastBotMessage, setLastBotMessage] = useState("Hello, I'm SEISTA AI. I'm here to listen. How are you feeling today? Use the microphone to talk to me.");
+  const [lastBotMessage, setLastBotMessage] = useState("Hey, it's me. I'm here to listen. Tell me what's on your mind. Just tap the button to talk.");
   const [currentMood, setCurrentMood] = useState("neutral");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
-  const { speak, cancel, speaking } = useSpeechSynthesis();
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
+  
+  const voiceRecorderRef = useRef<{ startRecording: () => void; stopRecording: () => void }>(null);
+
+  const onSpeechEnd = () => {
+    setLastBotMessage("");
+    // Automatically start recording after AI finishes speaking
+    voiceRecorderRef.current?.startRecording();
+  }
+  
+  const { speak, cancel, speaking } = useSpeechSynthesis({ onEnd: onSpeechEnd });
 
   const addMessage = (role: "user" | "assistant", content: string) => {
     const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
@@ -30,10 +39,6 @@ export function ChatView() {
       setLastBotMessage(content);
     }
   };
-
-  const onSpeechEnd = () => {
-    setLastBotMessage("");
-  }
   
   const handleVoiceSubmit = async (audioBlob: Blob) => {
     setIsRecording(false);
@@ -57,7 +62,7 @@ export function ChatView() {
                 
                 const responseText = await getAiResponse(messages, mood);
                 addMessage("assistant", responseText);
-                speak({ text: responseText, onEnd: onSpeechEnd });
+                speak({ text: responseText });
             };
         } catch (error) {
             toast({
@@ -67,18 +72,19 @@ export function ChatView() {
             })
             const errorResponse = "Sorry, I had trouble understanding that. Could you try again?";
             addMessage("assistant", errorResponse);
-            speak({ text: errorResponse, onEnd: onSpeechEnd });
+            speak({ text: errorResponse });
         }
     });
   }
 
   const handleGetStrategies = () => {
+    if (speaking) cancel();
     startTransition(async () => {
         try {
             const strategies = await getCopingStrategies(messages, currentMood);
             const strategyText = `Here are a few ideas that might help:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
             addMessage("assistant", strategyText);
-            speak({ text: strategyText, onEnd: onSpeechEnd });
+            speak({ text: strategyText });
         } catch (error) {
             toast({
               title: "Error",
@@ -87,7 +93,7 @@ export function ChatView() {
             })
             const errorResponse = "I'm having trouble coming up with strategies right now. Let's talk more first.";
             addMessage("assistant", errorResponse);
-            speak({ text: errorResponse, onEnd: onSpeechEnd });
+            speak({ text: errorResponse });
         }
     });
   }
@@ -105,7 +111,7 @@ export function ChatView() {
 
         <div className="w-full max-w-2xl text-center px-4">
             <p className="text-lg md:text-xl text-foreground/80 min-h-[6em] transition-opacity duration-300"
-               style={{ opacity: speaking ? 1 : 0 }}
+               style={{ opacity: speaking || isPending ? 1 : 0 }}
             >
                 {lastBotMessage}
             </p>
@@ -113,6 +119,7 @@ export function ChatView() {
         
         <div className="absolute bottom-10">
             <VoiceRecorder 
+                ref={voiceRecorderRef}
                 onAudioSubmit={handleVoiceSubmit} 
                 isSpeaking={speaking} 
                 stopSpeaking={cancel} 
