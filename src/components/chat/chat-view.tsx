@@ -26,13 +26,27 @@ export function ChatView() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const addMessage = useCallback((role: "user" | "assistant", content: string) => {
+    const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
+    setMessages(prev => [...prev, newMessage]);
+    if (role === "assistant") {
+      setLastBotMessage(content);
+    }
+  }, []);
+
   const handleAiResponse = useCallback(async (transcription: string) => {
+    const userMessage: Message = { id: 'temp-user', role: 'user', content: transcription, timestamp: new Date() };
+    const currentMessages = [...messages, userMessage];
+    
+    // Update the message list with the user's transcribed message
+    setMessages(currentMessages);
+
     try {
-        const conversationHistory = [...messages, { id: 'temp', role: 'user' as const, content: transcription, timestamp: new Date() }];
-        const responseText = await getAiResponse(conversationHistory, currentMood);
+        const responseText = await getAiResponse(currentMessages, currentMood);
         addMessage("assistant", responseText);
         speak({ text: responseText });
     } catch(error) {
+        console.error("Error getting AI response:", error);
         toast({
           title: "Error",
           description: "Could not get AI response.",
@@ -42,21 +56,14 @@ export function ChatView() {
         addMessage("assistant", errorResponse);
         speak({ text: errorResponse });
     }
-  }, [messages, currentMood]);
+  }, [messages, currentMood, addMessage]);
+
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
         // This logic is now handled by the user pressing the mic button
     },
   });
-
-  const addMessage = (role: "user" | "assistant", content: string) => {
-    const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
-    setMessages(prev => [...prev, newMessage]);
-    if (role === "assistant") {
-      setLastBotMessage(content);
-    }
-  };
 
   const startConversation = () => {
     setSessionState("active");
@@ -77,16 +84,14 @@ export function ChatView() {
 
     startTransition(async () => {
         try {
-            addMessage("user", "[Voice Input]");
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = async () => {
                 const base64Audio = reader.result as string;
                 
-                const { mood, transcription, confidence } = await getInitialMood(base64Audio);
+                const { mood, transcription } = await getInitialMood(base64Audio);
 
                 if (transcription) {
-                  addMessage("user", transcription); // Replace placeholder
                   const lowercasedText = transcription.toLowerCase();
                   if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
                     setShowSafetyAlert(true);
@@ -100,6 +105,7 @@ export function ChatView() {
                 }
             };
         } catch (error) {
+            console.error("Error Processing Voice", error);
             toast({
               title: "Error Processing Voice",
               description: "There was an issue understanding your voice input.",
@@ -138,7 +144,7 @@ export function ChatView() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setIsRecording(true);
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       audioChunksRef.current = []; // Clear previous chunks
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -165,12 +171,11 @@ export function ChatView() {
     }
   };
 
-
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
         <div className="relative w-64 h-64">
           <Image 
-            src="/seista.png"
+            src="/seista-avatar.png"
             alt="AI Assistant"
             width={256}
             height={256}
