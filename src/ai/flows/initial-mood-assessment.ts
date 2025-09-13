@@ -56,9 +56,19 @@ const initialMoodAssessmentFlow = ai.defineFlow(
     model: 'googleai/gemini-2.5-pro',
   },
   async input => {
-    // Convert WebM to WAV before sending to the prompt
-    const wavAudio = await convertAudioToWav(input);
-
+    let wavAudio;
+    try {
+      // Convert WebM to WAV before sending to the prompt
+      wavAudio = await convertAudioToWav(input);
+    } catch (error) {
+      console.error('Audio conversion failed:', error);
+      return {
+        mood: 'unknown',
+        confidence: 0,
+        transcription: '',
+      };
+    }
+    
     // If conversion failed, wavDataUri will be empty.
     if (!wavAudio.wavDataUri || !wavAudio.wavDataUri.split(',')[1]) {
       // Return a response indicating failure.

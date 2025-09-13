@@ -86,10 +86,9 @@ const convertAudioToWavFlow = ai.defineFlow(
     outputSchema: ConvertAudioOutputSchema,
   },
   async ({ voiceInput }) => {
-    try {
       const base64Data = voiceInput.split(',')[1];
       if (!base64Data) {
-        throw new Error('Invalid data URI format.');
+        throw new Error('Invalid data URI format for voice input.');
       }
       const inputBuffer = Buffer.from(base64Data, 'base64');
       
@@ -98,11 +97,5 @@ const convertAudioToWavFlow = ai.defineFlow(
       const wavDataUri = `data:audio/wav;base64,${wavBuffer.toString('base64')}`;
       
       return { wavDataUri };
-
-    } catch (error: any) {
-      console.error('Error converting audio to WAV:', error);
-      // Return an empty data URI in case of error to avoid breaking the calling flow.
-      return { wavDataUri: '' };
-    }
   }
 );
