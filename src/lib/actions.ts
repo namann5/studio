@@ -33,7 +33,7 @@ export async function getCopingStrategies(history: Message[], currentMood:string
 
 export async function getInitialMood(voiceInput: string) {
     const response = await runWithRetry(() => assessInitialMood({ voiceInput }));
-    return { ...response, text: response.transcription };
+    return response;
 }
 
 export async function getContextualMood(history: Message[]) {

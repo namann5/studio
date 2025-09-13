@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -25,20 +25,30 @@ export function ChatView() {
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  
-  const { speak, cancel, speaking } = useSpeechSynthesis();
 
-  const startConversation = () => {
-    setSessionState("active");
-    speak({ text: lastBotMessage });
-  };
-  
-  const endConversation = () => {
-    cancel();
-    stopRecording();
-    setSessionState("stopped");
-    setLastBotMessage("Our session has ended. Press 'Start' to begin again whenever you're ready.");
-  }
+  const handleAiResponse = useCallback(async (transcription: string) => {
+    try {
+        const conversationHistory = [...messages, { id: 'temp', role: 'user' as const, content: transcription, timestamp: new Date() }];
+        const responseText = await getAiResponse(conversationHistory, currentMood);
+        addMessage("assistant", responseText);
+        speak({ text: responseText });
+    } catch(error) {
+        toast({
+          title: "Error",
+          description: "Could not get AI response.",
+          variant: "destructive"
+        })
+        const errorResponse = "Sorry, I'm having a little trouble thinking. Could you say that again?";
+        addMessage("assistant", errorResponse);
+        speak({ text: errorResponse });
+    }
+  }, [messages, currentMood]);
+
+  const { speak, cancel, speaking } = useSpeechSynthesis({
+    onEnd: () => {
+        // This logic is now handled by the user pressing the mic button
+    },
+  });
 
   const addMessage = (role: "user" | "assistant", content: string) => {
     const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
@@ -48,37 +58,51 @@ export function ChatView() {
     }
   };
 
+  const startConversation = () => {
+    setSessionState("active");
+    speak({ text: lastBotMessage });
+  };
+  
+  const endConversation = () => {
+    cancel();
+    if(isRecording) {
+      stopRecording();
+    }
+    setSessionState("stopped");
+    setLastBotMessage("Our session has ended. Press 'Start' to begin again whenever you're ready.");
+  }
+
   const handleVoiceSubmit = (audioBlob: Blob) => {
     if (sessionState !== 'active') return;
 
     startTransition(async () => {
         try {
+            addMessage("user", "[Voice Input]");
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             reader.onloadend = async () => {
                 const base64Audio = reader.result as string;
-                addMessage("user", "[Voice Input]");
                 
-                const { mood, transcription } = await getInitialMood(base64Audio);
+                const { mood, transcription, confidence } = await getInitialMood(base64Audio);
 
                 if (transcription) {
+                  addMessage("user", transcription); // Replace placeholder
                   const lowercasedText = transcription.toLowerCase();
                   if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
                     setShowSafetyAlert(true);
                   }
+                  setCurrentMood(mood);
+                  await handleAiResponse(transcription);
+                } else {
+                   const errorResponse = "I'm sorry, I didn't catch that. Could you please say it again?";
+                   addMessage("assistant", errorResponse);
+                   speak({ text: errorResponse });
                 }
-                
-                setCurrentMood(mood);
-                
-                const conversationHistory = [...messages, { id: 'temp', role: 'user' as const, content: transcription, timestamp: new Date() }];
-                const responseText = await getAiResponse(conversationHistory, mood);
-                addMessage("assistant", responseText);
-                speak({ text: responseText });
             };
         } catch (error) {
             toast({
-              title: "Error",
-              description: "Could not process voice input.",
+              title: "Error Processing Voice",
+              description: "There was an issue understanding your voice input.",
               variant: "destructive"
             })
             const errorResponse = "Sorry, I had trouble understanding that. Could you try again?";
@@ -115,6 +139,7 @@ export function ChatView() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setIsRecording(true);
       mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = []; // Clear previous chunks
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
@@ -123,13 +148,12 @@ export function ChatView() {
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         handleVoiceSubmit(audioBlob);
-        audioChunksRef.current = [];
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => track.stop()); // Stop the stream tracks
       };
       mediaRecorderRef.current.start();
     } catch (error) {
       console.error("Error accessing microphone", error);
-      toast({ title: "Microphone Error", description: "Could not access microphone.", variant: "destructive" });
+      toast({ title: "Microphone Error", description: "Could not access microphone. Please check your browser permissions.", variant: "destructive" });
       setIsRecording(false);
     }
   };
