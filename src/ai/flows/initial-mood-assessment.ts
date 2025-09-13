@@ -34,11 +34,11 @@ export async function assessInitialMood(input: InitialMoodAssessmentInput): Prom
 
 const initialMoodAssessmentPrompt = ai.definePrompt({
   name: 'initialMoodAssessmentPrompt',
-  input: {schema: z.object({ voiceInput: z.string() })},
+  input: {schema: InitialMoodAssessmentInputSchema},
   output: {schema: InitialMoodAssessmentOutputSchema},
-  prompt: `Analyze the user's speech from the provided audio. Transcribe their words. Also, analyze their vocal tone to determine their emotional state.
+  prompt: `Analyze the user's speech from the provided audio. Transcribe their words and determine their emotional state.
 
-Respond with your analysis in the specified format.
+Your response must be in the format specified by the output schema.
 
 Audio: {{media url=voiceInput mimeType='audio/webm'}}`,
 });
@@ -62,7 +62,11 @@ const initialMoodAssessmentFlow = ai.defineFlow(
     try {
       const {output} = await initialMoodAssessmentPrompt(input);
       if (!output) {
-        throw new Error('No output from AI model.');
+        console.error('Initial State Analysis: No output from AI model.');
+        return {
+          mood: 'error',
+          transcription: '',
+        };
       }
       return output;
     } catch (error) {
