@@ -39,7 +39,7 @@ const assessMoodPrompt = ai.definePrompt({
   name: 'assessMoodPrompt',
   input: {schema: AssessMoodInputSchema},
   output: {schema: AssessMoodOutputSchema},
-  prompt: `As an AI Sensei, I will analyze the user's conversation history to perform a continuous analysis of their emotional chakra.
+  prompt: `As an AI assistant, I will analyze the user's conversation history to perform a continuous analysis of their emotional state.
 
   Analyze the following conversation history to determine the user's current state, its intensity, and the contributing factors:
 

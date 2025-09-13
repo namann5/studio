@@ -19,18 +19,18 @@ const moodData = [
 const conversationHistory = [
     {
         date: "Yesterday",
-        summary: "Practiced the 'Calm Mind' jutsu to prepare for the Chunin Exams.",
+        summary: "Talked about feeling anxious about exams.",
         transcript: [
             { role: "user", text: "I'm feeling really anxious about the exams tomorrow." },
-            { role: "ai", text: "It is natural to feel the weight of this mission. A calm mind is your sharpest kunai. Let us practice controlling your chakra flow." },
+            { role: "ai", text: "It's completely normal to feel anxious before a big test. Let's maybe explore some ways to manage that anxiety." },
         ]
     },
     {
         date: "3 days ago",
-        summary: "Discussed feelings of isolation after a solo mission.",
+        summary: "Discussed feelings of isolation.",
         transcript: [
             { role: "user", text: "I've been feeling a bit lonely lately." },
-            { role: "ai", text: "Even the strongest shinobi needs their village. Remember the bonds you have forged. I am here to listen, young one." },
+            { role: "ai", text: "Thank you for sharing that. Feeling lonely can be tough. I'm here to listen." },
         ]
     }
 ];
@@ -39,14 +39,14 @@ export function DashboardView() {
   return (
     <div className="h-screen flex flex-col">
         <header className="p-4 border-b flex items-center bg-background">
-            <h1 className="text-xl font-bold font-headline">Shinobi Progress Report</h1>
+            <h1 className="text-xl font-bold font-headline">Your Wellness Dashboard</h1>
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline">Weekly Chakra Fluctuation</CardTitle>
-                    <CardDescription>A visualization of your emotional chakra levels over the past week.</CardDescription>
+                    <CardTitle className="font-headline">Weekly Mood Trends</CardTitle>
+                    <CardDescription>A visualization of your emotional wellness over the past week.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <MoodChart data={moodData} />
@@ -55,8 +55,8 @@ export function DashboardView() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline">Encrypted Mission Logs</CardTitle>
-                    <CardDescription>Review summaries of your past training sessions. Your scrolls are sealed and private.</CardDescription>
+                    <CardTitle className="font-headline">Encrypted Conversation History</CardTitle>
+                    <CardDescription>Review summaries of your past sessions. Your data is private and secure.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Accordion type="single" collapsible className="w-full">

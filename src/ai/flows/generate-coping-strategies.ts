@@ -45,11 +45,7 @@ const prompt = ai.definePrompt({
 Conversation History:
 {{{conversationHistory}}}
 
-Formulate the new strategies as a numbered list of clear, concise directives.
-
-1. ...
-2. ...
-3. ...
+Formulate the new strategies as a list of clear, concise directives.
 `,
 });
 
