@@ -100,7 +100,7 @@ export function ChatView() {
                   setCurrentMood(mood);
                   await handleAiResponse(transcription);
                 } else {
-                   const errorResponse = "Apologies. I didn't catch that. Could you say it again?";
+                   const errorResponse = "It seems I'm still not detecting any speech. Please know I'm here and ready to listen whenever you're ready to share, with no pressure at all.";
                    addMessage("assistant", errorResponse);
                    speak({ text: errorResponse });
                 }
