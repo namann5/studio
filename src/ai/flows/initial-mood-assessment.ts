@@ -36,9 +36,9 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
   name: 'initialMoodAssessmentPrompt',
   input: {schema: z.object({ voiceInput: z.string() })},
   output: {schema: InitialMoodAssessmentOutputSchema},
-  prompt: `As J.A.R.V.I.S., analyze the following audio input. Transcribe the user's speech and perform a preliminary emotional state analysis based on vocal tone and content. If the user is speaking in a language other than English (such as Hindi), you must transcribe their speech into English.
+  prompt: `Analyze the user's speech from the provided audio. Transcribe their words into English, even if they speak another language like Hindi. Also, analyze their vocal tone to determine their emotional state.
 
-Respond with only the assessed state and the English transcription.
+Respond with your analysis in the specified format.
 
 Audio: {{media url=voiceInput mimeType='audio/webm'}}`,
 });
@@ -51,7 +51,7 @@ const initialMoodAssessmentFlow = ai.defineFlow(
   },
   async input => {
     // Check for valid base64 data.
-    if (!input.voiceInput || !input.voiceInput.startsWith('data:audio/webm;base64,') || input.voiceInput.split(',')[1].length === 0) {
+    if (!input.voiceInput || !input.voiceInput.startsWith('data:audio/webm;base64,') || input.voiceInput.split(',')[1].length < 100) {
       console.error('Initial State Analysis: Invalid or empty voice input data URI.');
       return {
         mood: 'unknown',
@@ -69,7 +69,7 @@ const initialMoodAssessmentFlow = ai.defineFlow(
       console.error('Error during initial state analysis:', error);
       return {
         mood: 'error',
-        transcription: 'Apologies, Sir. I seem to be having trouble with my audio processing sensors. Could you please repeat that?',
+        transcription: 'Apologies, Sir. My audio sensors failed to parse that. Could you please repeat your statement?',
       };
     }
   }
