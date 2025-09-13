@@ -23,6 +23,12 @@
       "description": "An illustration of a microphone icon for voice input.",
       "imageUrl": "https://picsum.photos/seed/seista-voice/600/400",
       "imageHint": "microphone icon"
+    },
+    {
+      "id": "ai-avatar",
+      "description": "An abstract, friendly avatar for the AI assistant.",
+      "imageUrl": "https://picsum.photos/seed/seista-avatar/256/256",
+      "imageHint": "abstract friendly"
     }
   ]
 }

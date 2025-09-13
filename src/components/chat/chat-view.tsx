@@ -10,6 +10,7 @@ import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/action
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
@@ -26,6 +27,8 @@ export function ChatView() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const aiAvatar = PlaceHolderImages.find(img => img.id === 'ai-avatar');
+
   const addMessage = useCallback((role: "user" | "assistant", content: string) => {
     const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
     setMessages(prev => [...prev, newMessage]);
@@ -35,28 +38,27 @@ export function ChatView() {
   }, []);
 
   const handleAiResponse = useCallback(async (transcription: string) => {
-    // Add user message first, so AI can respond to it
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
-  
-    // Now create the history for the AI, including the new user message
     const currentHistory = [...messages, userMessage];
-    setMessages(prev => [...prev, userMessage]); // Also update state immediately
+    setMessages(prev => [...prev, userMessage]);
   
-    try {
-      const responseText = await getAiResponse(currentHistory, currentMood);
-      addMessage("assistant", responseText);
-      speak({ text: responseText });
-    } catch(error) {
-      console.error("Error getting AI response:", error);
-      toast({
-        title: "Error",
-        description: "Could not get AI response.",
-        variant: "destructive"
-      });
-      const errorResponse = "Sorry, I'm having a little trouble thinking. Could you say that again?";
-      addMessage("assistant", errorResponse);
-      speak({ text: errorResponse });
-    }
+    startTransition(async () => {
+      try {
+        const responseText = await getAiResponse(currentHistory, currentMood);
+        addMessage("assistant", responseText);
+        speak({ text: responseText });
+      } catch(error) {
+        console.error("Error getting AI response:", error);
+        toast({
+          title: "Error",
+          description: "Could not get AI response.",
+          variant: "destructive"
+        });
+        const errorResponse = "Sorry, I'm having a little trouble thinking. Could you say that again?";
+        addMessage("assistant", errorResponse);
+        speak({ text: errorResponse });
+      }
+    });
   }, [messages, currentMood, addMessage]);
 
 
@@ -175,19 +177,22 @@ export function ChatView() {
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
         <div className="relative w-64 h-64">
-          <Image 
-            src="/seista.webp"
-            alt="AI Assistant"
-            width={256}
-            height={256}
-            className={cn(
-              "rounded-full object-cover shadow-lg transition-transform duration-500",
-              speaking ? "scale-110" : "scale-100",
-              isRecording ? "ring-4 ring-primary ring-offset-4 ring-offset-background" : "",
-              isPending ? "animate-pulse" : ""
-            )}
-            priority
-          />
+          {aiAvatar && (
+            <Image 
+              src={aiAvatar.imageUrl}
+              alt={aiAvatar.description}
+              width={256}
+              height={256}
+              className={cn(
+                "rounded-full object-cover shadow-lg transition-transform duration-500",
+                speaking ? "scale-110" : "scale-100",
+                isRecording ? "ring-4 ring-primary ring-offset-4 ring-offset-background" : "",
+                isPending ? "animate-pulse" : ""
+              )}
+              priority
+              data-ai-hint={aiAvatar.imageHint}
+            />
+          )}
         </div>
 
         <div className="absolute top-0 right-0 p-4">
