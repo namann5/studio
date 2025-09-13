@@ -32,10 +32,9 @@ export function ChatView() {
   });
 
   useEffect(() => {
-    if (speaking) {
+    if (speaking && sessionState !== 'speaking') {
       setSessionState("speaking");
-    } else if (sessionState === 'speaking' && !speaking) {
-      // Transition back to idle after speaking is done
+    } else if (!speaking && sessionState === 'speaking') {
       setSessionState('idle');
     }
   }, [speaking, sessionState]);
@@ -67,16 +66,15 @@ export function ChatView() {
         });
         const errorResponse = "Apologies. My response systems encountered an error. Could you repeat that?";
         addMessage("assistant", errorResponse);
-      } finally {
-        setSessionState('idle');
       }
     });
   }, [messages, currentMood, addMessage, toast]);
 
   const startConversation = () => {
-    setSessionState("idle");
-    setLastBotMessage("Greetings. Speak, and I shall listen.");
-    speak({ text: "Greetings. Speak, and I shall listen." });
+    const greeting = "Greetings. Speak, and I shall listen.";
+    setSessionState("speaking");
+    setLastBotMessage(greeting);
+    speak({ text: greeting });
   };
   
   const endConversation = () => {
@@ -111,7 +109,6 @@ export function ChatView() {
                 } else {
                    const errorResponse = "It seems I'm still not detecting any speech. Please know I'm here and ready to listen whenever you're ready to share, with no pressure at all.";
                    addMessage("assistant", errorResponse);
-                   setSessionState('idle');
                 }
             };
         } catch (error) {
@@ -123,7 +120,6 @@ export function ChatView() {
             })
             const errorResponse = "My apologies. My sensors encountered an anomaly. Please try again.";
             addMessage("assistant", errorResponse);
-            setSessionState('idle');
         }
     });
   }
@@ -182,8 +178,6 @@ export function ChatView() {
             })
             const errorResponse = "I'm afraid I cannot generate new techniques at this time. Please try again later.";
             addMessage("assistant", errorResponse);
-        } finally {
-            setSessionState('idle');
         }
     });
   }
@@ -191,13 +185,15 @@ export function ChatView() {
   const isListening = sessionState === 'listening';
   const isProcessing = sessionState === 'processing';
   const isSpeaking = sessionState === 'speaking';
-  const isInteractive = sessionState !== 'idle' && sessionState !== 'stopped';
+  const isInteractive = sessionState !== 'idle';
   
   const getStatusText = () => {
     if (isListening) return "Listening...";
     if (isProcessing) return "Processing...";
     if (isSpeaking) return "Speaking...";
     if (sessionState === 'stopped') return "Session ended.";
+    if (sessionState === 'idle' && messages.length === 0) return "Press 'Begin Session' to start.";
+    if (sessionState === 'idle' && messages.length > 0) return "Ready. Press and hold the mic to speak.";
     return lastBotMessage;
   };
   
@@ -225,7 +221,7 @@ export function ChatView() {
         </div>
 
         <div className="absolute top-0 right-0 p-4">
-            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isInteractive || isProcessing || isSpeaking}>
+            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={messages.length === 0 || isProcessing || isSpeaking}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
                 New Strategies
             </Button>
@@ -238,13 +234,13 @@ export function ChatView() {
         </div>
         
         <div className="absolute bottom-10 flex flex-col items-center gap-4">
-            {sessionState === "idle" && (
+            {sessionState === "idle" && messages.length === 0 && (
                 <Button onClick={startConversation} size="lg" className="rounded-full">
                     <Play className="mr-2" /> Begin Session
                 </Button>
             )}
 
-            {isInteractive && (
+            {isInteractive && sessionState !== 'stopped' && (
               <Button 
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
@@ -260,12 +256,13 @@ export function ChatView() {
                 <Mic className="w-8 h-8" />
               </Button>
             )}
-
-            {(isListening || isProcessing || isSpeaking) && (
+            
+            {sessionState !== 'idle' && sessionState !== 'stopped' && (
                   <Button onClick={endConversation} variant="destructive" size="sm">
                     <Square className="mr-2" /> End Session
                   </Button>
             )}
+
              {sessionState === "stopped" && (
                 <Button onClick={() => window.location.reload()} size="lg" className="rounded-full">
                     <Play className="mr-2" /> Restart Session
