@@ -17,7 +17,7 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<"idle" | "active" | "stopped">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("Greetings. I am your AI Sensei. How can I help you today?");
+  const [lastBotMessage, setLastBotMessage] = useState("Greetings. I am your AI Sensei. Speak, and I shall listen.");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -28,6 +28,10 @@ export function ChatView() {
   const audioChunksRef = useRef<Blob[]>([]);
 
   const aiAvatar = PlaceHolderImages.find(img => img.id === 'ai-avatar');
+
+  const { speak, cancel, speaking } = useSpeechSynthesis({
+    onEnd: () => {},
+  });
 
   const addMessage = useCallback((role: "user" | "assistant", content: string) => {
     const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
@@ -59,12 +63,8 @@ export function ChatView() {
         speak({ text: errorResponse });
       }
     });
-  }, [messages, currentMood, addMessage]);
+  }, [messages, currentMood, addMessage, speak, toast]);
 
-
-  const { speak, cancel, speaking } = useSpeechSynthesis({
-    onEnd: () => {},
-  });
 
   const startConversation = () => {
     setSessionState("active");
@@ -100,7 +100,7 @@ export function ChatView() {
                   setCurrentMood(mood);
                   await handleAiResponse(transcription);
                 } else {
-                   const errorResponse = "Forgive me, young one. My senses were clouded for a moment. Could you repeat that?";
+                   const errorResponse = "Forgive me, young one. I didn't catch that. Could you say it again?";
                    addMessage("assistant", errorResponse);
                    speak({ text: errorResponse });
                 }
@@ -265,5 +265,3 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
-
-    
