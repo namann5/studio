@@ -30,6 +30,7 @@ export function ChatView() {
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
+      // This helps transition from speaking back to listening
       if (sessionState === 'speaking') {
         setSessionState('listening');
       }
@@ -42,11 +43,11 @@ export function ChatView() {
     if (role === "assistant") {
       setLastBotMessage(content);
       speak({ text: content });
-      // This is a failsafe to ensure we transition to listening if the onEnd doesn't fire.
+      // A specific fix to transition to listening after the very first greeting.
       if (messages.length === 0) {
         setTimeout(() => {
           setSessionState('listening');
-        }, 2000); // Give it a moment to start speaking
+        }, 1000); 
       }
     }
   }, [speak, messages.length]);
@@ -74,7 +75,7 @@ export function ChatView() {
   }, [messages, currentMood, addMessage, toast]);
   
   const handleVoiceSubmit = (audioBlob: Blob) => {
-    if (sessionState !== 'listening') return;
+    if (sessionState !== 'listening' && sessionState !== 'processing') return;
     setSessionState("processing");
 
     startTransition(async () => {
@@ -108,14 +109,13 @@ export function ChatView() {
             const errorResponse = "My apologies. My sensors encountered an anomaly. Please try again.";
             addMessage("assistant", errorResponse);
         } finally {
-            if (sessionState !== 'speaking') {
-                setSessionState('listening');
-            }
+            // The onEnd callback in useSpeechSynthesis will handle the transition to listening
         }
     });
   }
 
   const startRecording = async () => {
+    if (speaking) cancel(); // Stop any ongoing speech
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -127,12 +127,14 @@ export function ChatView() {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        handleVoiceSubmit(audioBlob);
+        if (audioBlob.size > 1000) { // Only submit if there's actual audio
+          handleVoiceSubmit(audioBlob);
+        }
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorderRef.current.start();
-      setSessionState("listening");
+      setSessionState("listening"); // Explicitly set to listening
     } catch (error) {
       console.error("Error accessing microphone:", error);
       toast({
@@ -147,8 +149,8 @@ export function ChatView() {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
+      setSessionState("processing"); // Move to processing while waiting for transcription
     }
-    // Stay in listening state until processing is done
   };
   
   const startConversation = () => {
@@ -186,8 +188,6 @@ export function ChatView() {
             })
             const errorResponse = "I'm afraid I cannot generate new techniques at this time. Please try again later.";
             addMessage("assistant", errorResponse);
-        } finally {
-            setSessionState('listening');
         }
     });
   }
@@ -198,8 +198,8 @@ export function ChatView() {
     }
   }, [speaking, sessionState]);
 
-  const isListening = sessionState === 'listening';
-  const isProcessing = sessionState === 'processing';
+  const isRecording = mediaRecorderRef.current?.state === 'recording';
+  const isProcessing = sessionState === 'processing' || isPending;
   const isSpeaking = sessionState === 'speaking';
   const isSessionActive = sessionState !== 'idle';
   
@@ -207,23 +207,16 @@ export function ChatView() {
     if (sessionState === 'idle') return "Press 'Begin Session' to start.";
     if (isProcessing) return "Processing...";
     if (isSpeaking) return lastBotMessage;
-    if (isListening) {
-         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-            return "Listening... Press the Mic to stop and process.";
-         }
-         return "Press the Mic to speak.";
-    }
-    return lastBotMessage;
+    if (isRecording) return "Listening... Press the Mic to stop and process.";
+    return "Press the Mic to speak.";
   };
 
   const getAvatarClass = () => {
     if (isSpeaking) return "shadow-[0_0_40px_8px_hsl(var(--primary))]";
-    if (isProcessing || isPending) return "scale-110 shadow-[0_0_50px_10px_hsl(var(--accent))] animate-pulse";
-    if (mediaRecorderRef.current?.state === "recording") return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
+    if (isProcessing) return "scale-110 shadow-[0_0_50px_10px_hsl(var(--accent))] animate-pulse";
+    if (isRecording) return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
     return "";
   };
-  
-  const isRecording = mediaRecorderRef.current?.state === 'recording';
 
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
