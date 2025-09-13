@@ -15,12 +15,14 @@ type UseSpeechSynthesisOptions = {
     onEnd?: () => void;
 };
 
+const MAX_TEXT_LENGTH = 150; // Max characters per chunk
 
 export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const [speaking, setSpeaking] = useState(false);
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [supported, setSupported] = useState(false);
     const onEndRef = useRef(opts?.onEnd);
+    const utteranceQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
 
     const populateVoiceList = useCallback(() => {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -43,53 +45,82 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         }
     }, [populateVoiceList]);
 
+    const processQueue = useCallback(() => {
+        if (utteranceQueueRef.current.length > 0) {
+            const utterance = utteranceQueueRef.current.shift();
+            if (utterance) {
+                window.speechSynthesis.speak(utterance);
+            }
+        } else {
+            setSpeaking(false);
+            if (onEndRef.current) {
+                onEndRef.current();
+            }
+        }
+    }, []);
+
     const speak = useCallback((options: SpeechOptions) => {
         if (!supported || speaking) return;
 
         const { text, rate = 1, pitch = 1, volume = 1, voice } = options;
         
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = rate;
-        utterance.pitch = pitch;
-        utterance.volume = volume;
-
-        if (voice) {
-            utterance.voice = voice;
-        } else {
-            // Find a standard, high-quality US English voice.
-            const preferredVoice = 
-                voices.find(v => v.lang === 'en-US' && v.name.includes('Google') && !v.name.includes('Male')) || 
-                voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) ||
-                voices.find(v => v.lang === 'en-US');
-            
-            if (preferredVoice) {
-                utterance.voice = preferredVoice;
-            }
-        }
-        
-        utterance.onstart = () => {
-            setSpeaking(true);
-        };
-
-        utterance.onend = () => {
-            setSpeaking(false);
-            if (onEndRef.current) {
-                onEndRef.current();
-            }
-        };
-
-        utterance.onerror = (event) => {
-            console.error('SpeechSynthesisUtterance.onerror', event);
-            setSpeaking(false);
-        };
-        
         // Cancel any previous speech to prevent overlap
         window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-    }, [supported, speaking, voices]);
+        utteranceQueueRef.current = [];
+
+        setSpeaking(true);
+
+        const chunks: string[] = [];
+        let currentChunk = '';
+
+        const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+
+        sentences.forEach(sentence => {
+            if ((currentChunk + sentence).length > MAX_TEXT_LENGTH) {
+                chunks.push(currentChunk);
+                currentChunk = sentence;
+            } else {
+                currentChunk += sentence;
+            }
+        });
+        if (currentChunk) {
+            chunks.push(currentChunk);
+        }
+
+        const preferredVoice = 
+            voices.find(v => v.lang === 'en-US' && v.name.includes('Google') && !v.name.includes('Male')) || 
+            voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) ||
+            voices.find(v => v.lang === 'en-US');
+
+        utteranceQueueRef.current = chunks.map(chunk => {
+            const utterance = new SpeechSynthesisUtterance(chunk);
+            utterance.rate = rate;
+            utterance.pitch = pitch;
+            utterance.volume = volume;
+            
+            if (voice) {
+                utterance.voice = voice;
+            } else if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+
+            utterance.onend = processQueue;
+            utterance.onerror = (event) => {
+                console.error('SpeechSynthesisUtterance.onerror', event);
+                // Clear queue and stop speaking on error
+                utteranceQueueRef.current = [];
+                setSpeaking(false);
+            };
+            return utterance;
+        });
+
+        processQueue();
+
+    }, [supported, speaking, voices, processQueue]);
 
     const cancel = useCallback(() => {
         if (!supported) return;
+        utteranceQueueRef.current = [];
         setSpeaking(false);
         window.speechSynthesis.cancel();
     }, [supported]);
