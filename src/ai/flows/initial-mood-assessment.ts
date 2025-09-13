@@ -36,6 +36,7 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
   name: 'initialMoodAssessmentPrompt',
   input: {schema: z.object({ voiceInput: z.string() })},
   output: {schema: InitialMoodAssessmentOutputSchema},
+  model: 'googleai/gemini-2.5-pro',
   prompt: `Transcribe the following audio and assess the user's primary mood from their tone and words. Respond with only the mood and transcription.
 
 Audio: {{media url=voiceInput mimeType='audio/webm'}}`,
