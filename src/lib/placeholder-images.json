@@ -2,15 +2,15 @@
   "placeholderImages": [
     {
       "id": "hero-image",
-      "description": "A powerful ninja in a dynamic pose, channeling energy under a dramatic sky.",
-      "imageUrl": "https://picsum.photos/seed/nindo-hero-2/1200/800",
-      "imageHint": "ninja power"
+      "description": "A diverse group of young people sitting together and talking in a sunlit, comfortable room.",
+      "imageUrl": "https://picsum.photos/seed/youthmind-hero/1200/800",
+      "imageHint": "youth mental health"
     },
     {
       "id": "ai-avatar",
-      "description": "A swirling vortex of blue energy, resembling a Rasengan.",
-      "imageUrl": "https://picsum.photos/seed/nindo-avatar-2/256/256",
-      "imageHint": "energy swirl"
+      "description": "A calm, abstract shape with soft, glowing blue and purple gradients.",
+      "imageUrl": "https://picsum.photos/seed/youthmind-avatar/256/256",
+      "imageHint": "calm abstract"
     }
   ]
 }

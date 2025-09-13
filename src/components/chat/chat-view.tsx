@@ -17,7 +17,7 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<"idle" | "listening" | "processing" | "speaking">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("Greetings. Speak, and I shall listen.");
+  const [lastBotMessage, setLastBotMessage] = useState("Hello. I'm here to listen. Feel free to share what's on your mind.");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -67,7 +67,7 @@ export function ChatView() {
           description: "There was an error generating a response.",
           variant: "destructive"
         });
-        const errorResponse = "Apologies. My response systems encountered an error. Please try again.";
+        const errorResponse = "I'm sorry, I encountered an error trying to respond. Please try again.";
         addMessage("assistant", errorResponse);
       }
     });
@@ -94,7 +94,7 @@ export function ChatView() {
                   await handleAiResponse(transcription);
                 } else {
                    // If transcription is empty, let the user know and go back to listening.
-                   const errorResponse = "It seems I'm still not detecting any speech. Please know I'm here and ready to listen whenever you're ready to share, with no pressure at all.";
+                   const errorResponse = "I'm sorry, I didn't catch that. Could you please say it again?";
                    addMessage("assistant", errorResponse);
                 }
             };
@@ -105,7 +105,7 @@ export function ChatView() {
               description: "There was an issue processing your audio.",
               variant: "destructive"
             })
-            const errorResponse = "My apologies. My sensors encountered an anomaly. Please try again.";
+            const errorResponse = "My apologies. I encountered an issue processing that. Please try again.";
             addMessage("assistant", errorResponse);
         }
         // The onEnd callback in useSpeechSynthesis will handle the final transition to listening
@@ -157,7 +157,7 @@ export function ChatView() {
   };
   
   const startConversation = () => {
-    const greeting = "Greetings. Speak, and I shall listen.";
+    const greeting = "Hello. I'm here to listen. Feel free to share what's on your mind.";
     addMessage("assistant", greeting);
   };
   
@@ -167,7 +167,7 @@ export function ChatView() {
       mediaRecorderRef.current.stop();
     }
     setSessionState("idle");
-    setLastBotMessage("Session ended. Have a good day.");
+    setLastBotMessage("Session ended. Take care.");
     setMessages([]);
   }
 
@@ -180,7 +180,7 @@ export function ChatView() {
     startTransition(async () => {
         try {
             const strategies = await getCopingStrategies(messages, currentMood);
-            const strategyText = `Of course. Here are some new strategies to practice based on your current state:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+            const strategyText = `Of course. Here are a few strategies that might be helpful:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
             addMessage("assistant", strategyText);
         } catch (error) {
             toast({
@@ -188,7 +188,7 @@ export function ChatView() {
               description: "Could not generate new strategies.",
               variant: "destructive"
             })
-            const errorResponse = "I'm afraid I cannot generate new techniques at this time. Please try again later.";
+            const errorResponse = "I'm sorry, I was unable to generate strategies at this moment. Please try again later.";
             addMessage("assistant", errorResponse);
         }
     });
@@ -210,9 +210,9 @@ export function ChatView() {
     if (sessionState === 'idle') return "Press 'Begin Session' to start.";
     if (isProcessing) return "Processing...";
     if (isSpeaking) return lastBotMessage;
-    if (isRecording) return "Listening... Press the Mic to stop and process.";
+    if (isRecording) return "Listening... Press the Mic to stop.";
     if (sessionState === 'listening') return "Press the Mic to speak.";
-    return "Ready to begin."; // Fallback status
+    return "Ready."; // Fallback status
   };
 
   const getAvatarClass = () => {
@@ -224,7 +224,7 @@ export function ChatView() {
 
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+        <div className="absolute inset-0 bg-grid-pattern bg-center [mask-image:radial-gradient(ellipse_at_center,white_20%,transparent_70%)] opacity-30"></div>
         
         <div className="relative w-64 h-64">
           {aiAvatar && (
@@ -246,7 +246,7 @@ export function ChatView() {
         <div className="absolute top-0 right-0 p-4">
             <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isSessionActive || isProcessing || isSpeaking || isRecording}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
-                New Strategies
+                Coping Strategies
             </Button>
         </div>
 
@@ -305,5 +305,3 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
-
-    

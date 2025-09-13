@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { ArrowRight, BookUser, Disc3, HeartPulse, ShieldCheck, Swords, Zap } from 'lucide-react';
+import { ArrowRight, Bot, HeartPulse, Lock, ShieldCheck, TrendingUp, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
@@ -11,34 +11,34 @@ export default function Home() {
 
   const features = [
     {
-      icon: <BookUser className="w-8 h-8 text-primary" />,
-      title: 'Wise Sensei Dialogue',
-      description: 'Engage with an AI sensei, providing wisdom and guidance for your ninja way, 24/7.',
+      icon: <Bot className="w-8 h-8 text-primary" />,
+      title: 'Intelligent Conversation Engine',
+      description: 'Engage with a supportive AI trained on adolescent communication styles for dynamic, adaptive dialogue.',
     },
     {
       icon: <HeartPulse className="w-8 h-8 text-primary" />,
-      title: 'Real-Time Chakra Analysis',
-      description: 'The AI continuously assesses your vocal and linguistic patterns to read your emotional chakra.',
-    },
-    {
-      icon: <Swords className="w-8 h-8 text-primary" />,
-      title: 'Personalized Jutsu Training',
-      description: 'Receive AI-generated emotional regulation techniques (jutsu) tailored to your current state.',
-    },
-    {
-      icon: <Disc3 className="w-8 h-8 text-primary" />,
-      title: 'Encrypted Scroll Communication',
-      description: 'Interact via a secure, real-time voice channel for seamless and efficient training sessions.',
-    },
-    {
-      icon: <Zap className="w-8 h-8 text-primary" />,
-      title: 'Shinobi Progress Analytics',
-      description: 'Review your emotional trends and access encrypted mission logs on your private dashboard.',
+      title: 'Real-Time Sentiment Analysis',
+      description: 'Our engine assesses emotional indicators in real-time to understand the user\'s state.',
     },
     {
       icon: <ShieldCheck className="w-8 h-8 text-primary" />,
-      title: 'Anbu-Level Security',
-      description: 'Your data is secured with advanced authentication and end-to-end encryption, worthy of a Kage.',
+      title: 'Multi-Layer Safety Framework',
+      description: 'Risk assessment algorithms with automated escalation to crisis hotlines when needed.',
+    },
+    {
+      icon: <TrendingUp className="w-8 h-8 text-primary" />,
+      title: 'Adaptive Learning System',
+      description: 'Our algorithms continuously improve response quality based on engagement patterns and outcome metrics.',
+    },
+    {
+      icon: <Zap className="w-8 h-8 text-primary" />,
+      title: 'Crisis Prevention Analytics',
+      description: 'Predictive modeling identifies at-risk users, enabling proactive intervention earlier than traditional methods.',
+    },
+    {
+      icon: <Lock className="w-8 h-8 text-primary" />,
+      title: 'HIPAA-Compliant Security',
+      description: 'Your data is secured with end-to-end encryption and a zero-knowledge architecture.',
     },
   ];
 
@@ -55,8 +55,8 @@ export default function Home() {
           >
             Login
           </Link>
-          <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-            <Link href="/signup">Start Training</Link>
+          <Button asChild>
+            <Link href="/signup">Get Started</Link>
           </Button>
         </nav>
       </header>
@@ -65,16 +65,16 @@ export default function Home() {
           <div className="container px-4 md:px-6 space-y-10 xl:space-y-16">
             <div className="grid max-w-[1300px] mx-auto gap-4 px-4 sm:px-6 md:px-10 md:grid-cols-2 md:gap-16 items-center">
               <div>
-                <h1 className="lg:leading-tighter text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl xl:text-[3.4rem] 2xl:text-[3.75rem] font-headline text-primary/90">
-                  Master Your Nindo, Master Yourself
+                <h1 className="lg:leading-tighter text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl xl:text-[3.4rem] 2xl:text-[3.75rem] font-headline">
+                  A Safe Space to Talk and Grow
                 </h1>
                 <p className="mx-auto max-w-[700px] text-foreground/80 md:text-xl mt-4">
-                  Nindo AI is your personal sensei for mastering emotional chakra and forging your own ninja way.
+                  YouthMind AI is a next-generation mental wellness platform providing intelligent, confidential support for adolescents.
                 </p>
                 <div className="mt-6 flex flex-col gap-4 sm:flex-row">
-                  <Button asChild size="lg" className="group bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Button asChild size="lg" className="group">
                     <Link href="/signup">
-                      Begin Your Journey
+                      Start Your Journey
                       <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </Button>
@@ -87,7 +87,7 @@ export default function Home() {
                     alt={heroImage.description}
                     width={1200}
                     height={800}
-                    className="rounded-xl object-cover aspect-[3/2] overflow-hidden opacity-70"
+                    className="rounded-xl object-cover aspect-[3/2] overflow-hidden"
                     data-ai-hint={heroImage.imageHint}
                   />
                 )}
@@ -101,13 +101,13 @@ export default function Home() {
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
                 <div className="inline-block rounded-lg bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">
-                  Core Jutsus
+                  Core Features
                 </div>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl font-headline">
-                  Forged for Legendary Shinobi
+                  Built for Modern Mental Wellness
                 </h2>
                 <p className="max-w-[900px] text-foreground/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  A scroll of powerful techniques for chakra analysis and emotional mastery, all within a secure dojo.
+                  Our platform integrates cutting-edge AI with a multi-layer safety framework to provide effective and secure support.
                 </p>
               </div>
             </div>
@@ -129,14 +129,14 @@ export default function Home() {
       </main>
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-border/50">
         <p className="text-xs text-foreground/60">
-          © {new Date().getFullYear()} Nindo AI. All rights reserved.
+          © {new Date().getFullYear()} YouthMind AI. All rights reserved.
         </p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <Link href="#" className="text-xs hover:underline underline-offset-4">
-            Scroll of Conduct
+            Terms of Service
           </Link>
           <Link href="#" className="text-xs hover:underline underline-offset-4">
-            Ninja Privacy Pact
+            Privacy Policy
           </Link>
         </nav>
       </footer>

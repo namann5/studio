@@ -19,18 +19,18 @@ export default function SignupPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Join the Academy</CardTitle>
-        <CardDescription>Begin your journey to become a legendary shinobi.</CardDescription>
+        <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
+        <CardDescription>Start your journey towards mental wellness today.</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Your Ninja Name</Label>
-            <Input id="name" type="text" placeholder="e.g., Rock Lee" required />
+            <Label htmlFor="name">Full Name</Label>
+            <Input id="name" type="text" placeholder="e.g., Alex Doe" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="ninja@konoha.com" required />
+            <Input id="email" type="email" placeholder="you@example.com" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
@@ -38,7 +38,7 @@ export default function SignupPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full">Begin Training</Button>
+          <Button type="submit" className="w-full">Get Started</Button>
           <p className="text-xs text-center text-muted-foreground">
             Already have an account?{" "}
             <Link href="/login" className="underline hover:text-primary">
