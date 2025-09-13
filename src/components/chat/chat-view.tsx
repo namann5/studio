@@ -114,27 +114,22 @@ export function ChatView() {
     },
   });
 
-  useEffect(() => {
-    const checkMicPermission = async () => {
-      try {
-        // Request permission and get a stream to check
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Stop the tracks immediately as we only needed to check permission
-        stream.getTracks().forEach(track => track.stop());
-        setHasMicPermission(true);
-      } catch (error) {
-        console.error("Microphone permission denied:", error);
-        setHasMicPermission(false);
-      }
-    };
-    checkMicPermission();
-  }, []);
+  const startConversation = async () => {
+    setHasMicPermission(null); // Reset permission state on each attempt
+    try {
+      // Request permission and get a stream to check
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop the tracks immediately as we only needed to check permission
+      stream.getTracks().forEach(track => track.stop());
+      setHasMicPermission(true);
 
-
-  const startConversation = () => {
-    vad.start();
-    setSessionState("listening");
-    addMessage("assistant", "HELLO");
+      vad.start();
+      setSessionState("listening");
+      addMessage("assistant", "HELLO");
+    } catch (error) {
+      console.error("Microphone permission denied:", error);
+      setHasMicPermission(false);
+    }
   };
   
   const endConversation = () => {
@@ -238,7 +233,7 @@ export function ChatView() {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Microphone Access Denied</AlertTitle>
                 <AlertDescription>
-                  This application requires microphone access to function. Please enable it in your browser settings and refresh the page.
+                  This application requires microphone access to function. Please enable it in your browser settings.
                 </AlertDescription>
               </Alert>
             )}
@@ -246,7 +241,7 @@ export function ChatView() {
         
         <div className="absolute bottom-10 flex flex-col items-center gap-4">
             {!isSessionActive ? (
-                <Button onClick={startConversation} size="lg" className="rounded-full" disabled={hasMicPermission !== true}>
+                <Button onClick={startConversation} size="lg" className="rounded-full">
                     <Play className="mr-2" /> Begin Session
                 </Button>
             ) : (
@@ -286,3 +281,5 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
+
+    
