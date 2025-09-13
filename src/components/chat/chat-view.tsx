@@ -30,7 +30,7 @@ export function ChatView() {
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
-      // This helps transition from speaking back to listening
+      // Transition from speaking back to listening, ready for user input.
       if (sessionState === 'speaking') {
         setSessionState('listening');
       }
@@ -43,11 +43,10 @@ export function ChatView() {
     if (role === "assistant") {
       setLastBotMessage(content);
       speak({ text: content });
-      // A specific fix to transition to listening after the very first greeting.
+      // This is a specific fix to ensure that after the very first greeting,
+      // the app transitions to listening mode correctly.
       if (messages.length === 0) {
-        setTimeout(() => {
-          setSessionState('listening');
-        }, 1000); 
+        setSessionState('speaking'); // Set to speaking for the greeting
       }
     }
   }, [speak, messages.length]);
@@ -75,7 +74,6 @@ export function ChatView() {
   }, [messages, currentMood, addMessage, toast]);
   
   const handleVoiceSubmit = (audioBlob: Blob) => {
-    if (sessionState !== 'listening' && sessionState !== 'processing') return;
     setSessionState("processing");
 
     startTransition(async () => {
@@ -95,6 +93,7 @@ export function ChatView() {
                   setCurrentMood(mood);
                   await handleAiResponse(transcription);
                 } else {
+                   // If transcription is empty, let the user know and go back to listening.
                    const errorResponse = "It seems I'm still not detecting any speech. Please know I'm here and ready to listen whenever you're ready to share, with no pressure at all.";
                    addMessage("assistant", errorResponse);
                 }
@@ -108,14 +107,14 @@ export function ChatView() {
             })
             const errorResponse = "My apologies. My sensors encountered an anomaly. Please try again.";
             addMessage("assistant", errorResponse);
-        } finally {
-            // The onEnd callback in useSpeechSynthesis will handle the transition to listening
         }
+        // The onEnd callback in useSpeechSynthesis will handle the final transition to listening
     });
   }
 
   const startRecording = async () => {
-    if (speaking) cancel(); // Stop any ongoing speech
+    if (speaking) cancel(); // Stop any ongoing speech before recording
+    setSessionState("listening"); // Immediately go to listening state
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -127,14 +126,17 @@ export function ChatView() {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        if (audioBlob.size > 1000) { // Only submit if there's actual audio
+        // Only submit if there's substantial audio data
+        if (audioBlob.size > 1000) { 
           handleVoiceSubmit(audioBlob);
+        } else {
+          // If there's no real audio, just go back to listening state
+          setSessionState('listening');
         }
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorderRef.current.start();
-      setSessionState("listening"); // Explicitly set to listening
     } catch (error) {
       console.error("Error accessing microphone:", error);
       toast({
@@ -149,12 +151,12 @@ export function ChatView() {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
-      setSessionState("processing"); // Move to processing while waiting for transcription
+      // Transition to processing while we wait for the onstop handler
+      setSessionState("processing"); 
     }
   };
   
   const startConversation = () => {
-    setSessionState("speaking");
     const greeting = "Greetings. Speak, and I shall listen.";
     addMessage("assistant", greeting);
   };
@@ -193,6 +195,7 @@ export function ChatView() {
   }
   
   useEffect(() => {
+    // Sync UI state with speech synthesis state
     if (speaking && sessionState !== 'speaking') {
       setSessionState("speaking");
     }
@@ -208,7 +211,8 @@ export function ChatView() {
     if (isProcessing) return "Processing...";
     if (isSpeaking) return lastBotMessage;
     if (isRecording) return "Listening... Press the Mic to stop and process.";
-    return "Press the Mic to speak.";
+    if (sessionState === 'listening') return "Press the Mic to speak.";
+    return "Ready to begin."; // Fallback status
   };
 
   const getAvatarClass = () => {
@@ -301,3 +305,5 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
+
+    
