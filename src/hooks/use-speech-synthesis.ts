@@ -74,9 +74,9 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         setSpeaking(true);
 
         const chunks: string[] = [];
-        let currentText = text;
-
+        
         if (text.length > MAX_TEXT_LENGTH) {
+            // Split by sentences, but also consider commas for more natural breaks.
             const sentences = text.match(/[^.!?]+[.!?]*|[^,]+,*/g) || [];
             let currentChunk = "";
             for (const sentence of sentences) {
