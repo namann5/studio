@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useVAD } from "@/hooks/use-vad";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
@@ -23,6 +24,7 @@ export function ChatView() {
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
   const { toast } = useToast();
+  const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
   
   const aiAvatar = PlaceHolderImages.find(img => img.id === 'ai-avatar');
 
@@ -107,17 +109,31 @@ export function ChatView() {
     },
     onError(error) {
       console.error("VAD Error:", error);
-      toast({
-        title: "Microphone Error",
-        description: "Could not access the microphone. Please check your browser permissions.",
-        variant: "destructive",
-      });
+      setHasMicPermission(false);
       setSessionState("idle");
     },
   });
 
+  useEffect(() => {
+    const checkMicPermission = async () => {
+      try {
+        // Request permission and get a stream to check
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the tracks immediately as we only needed to check permission
+        stream.getTracks().forEach(track => track.stop());
+        setHasMicPermission(true);
+      } catch (error) {
+        console.error("Microphone permission denied:", error);
+        setHasMicPermission(false);
+      }
+    };
+    checkMicPermission();
+  }, []);
+
+
   const startConversation = () => {
     vad.start();
+    setSessionState("listening");
     addMessage("assistant", "HELLO");
   };
   
@@ -147,7 +163,10 @@ export function ChatView() {
             const errorResponse = "I'm sorry, I was unable to generate strategies at this moment. Please try again later.";
             addMessage("assistant", errorResponse);
         } finally {
-            vad.start();
+            if (sessionState !== 'idle') {
+                vad.start();
+                setSessionState('listening');
+            }
         }
     });
   }
@@ -167,6 +186,7 @@ export function ChatView() {
   const isSessionActive = sessionState !== 'idle';
   
   const getStatusText = () => {
+    if (hasMicPermission === false) return "Microphone access is required. Please enable it in your browser settings.";
     if (sessionState === 'idle') return "Press 'Begin Session' to start.";
     if (isProcessing) return "Processing...";
     if (isSpeaking) return lastBotMessage;
@@ -213,11 +233,20 @@ export function ChatView() {
             <p className="text-lg md:text-xl text-primary/80 min-h-[4em] transition-opacity duration-300 font-mono">
                 {getStatusText()}
             </p>
+            {hasMicPermission === false && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Microphone Access Denied</AlertTitle>
+                <AlertDescription>
+                  This application requires microphone access to function. Please enable it in your browser settings and refresh the page.
+                </AlertDescription>
+              </Alert>
+            )}
         </div>
         
         <div className="absolute bottom-10 flex flex-col items-center gap-4">
             {!isSessionActive ? (
-                <Button onClick={startConversation} size="lg" className="rounded-full">
+                <Button onClick={startConversation} size="lg" className="rounded-full" disabled={hasMicPermission !== true}>
                     <Play className="mr-2" /> Begin Session
                 </Button>
             ) : (

@@ -77,7 +77,7 @@ export const useVAD = (options: UseVADOptions) => {
             workletURL: '/vad.worklet.bundle.min.js',
             modelURL: '/silero_vad.onnx',
             onSpeechStart: () => {
-                console.log('VAD: Speech started');
+                // console.log('VAD: Speech started');
             },
             onSpeechEnd: (audio: Float32Array) => {
                 const pcm = floatTo16BitPCM(audio);
@@ -91,7 +91,7 @@ export const useVAD = (options: UseVADOptions) => {
             setListening(true);
         })
         .catch(e => {
-            console.error('Failed to create VAD', e);
+            console.error('Failed to create or start VAD', e);
             if (options.onError) {
                 options.onError(e);
             }
