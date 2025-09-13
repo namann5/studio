@@ -101,43 +101,60 @@ export function ChatView() {
 
 
   const startRecording = async () => {
-    setHasMicPermission(null);
     if (speaking) cancel();
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      setHasMicPermission(true);
+    if (!hasMicPermission) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+            setHasMicPermission(true);
+        } catch (error) {
+            console.error("Error accessing microphone:", error);
+            setHasMicPermission(false);
+            setSessionState("idle");
+            return;
+        }
+    }
+    
+    // Ensure we have a stream before proceeding
+    if (!streamRef.current) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+            setHasMicPermission(true);
+        } catch (error) {
+            console.error("Error accessing microphone:", error);
+            setHasMicPermission(false);
+            setSessionState("idle");
+            return;
+        }
+    }
 
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      audioChunksRef.current = [];
+    setSessionState("recording");
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
+    mediaRecorderRef.current = new MediaRecorder(streamRef.current);
+    audioChunksRef.current = [];
+
+    mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
-      };
+    };
 
-      mediaRecorderRef.current.onstop = () => {
+    mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         handleVoiceSubmit(audioBlob);
-      };
+        // Stop all tracks on the stream
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+    };
 
-      mediaRecorderRef.current.start();
-      setSessionState("recording");
-
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      setHasMicPermission(false);
-      setSessionState("idle");
-    }
+    mediaRecorderRef.current.start();
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
-    }
-    if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
     }
     setSessionState("processing"); 
   };
