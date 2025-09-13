@@ -15,7 +15,7 @@ const InitialMoodAssessmentInputSchema = z.object({
   voiceInput: z
     .string()
     .describe(
-      "The user voice input, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'." // Ensure correct MIME type and Base64 encoding
+      "The user voice input, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'" // Ensure correct MIME type and Base64 encoding
     ),
 });
 export type InitialMoodAssessmentInput = z.infer<typeof InitialMoodAssessmentInputSchema>;
@@ -52,6 +52,7 @@ const initialMoodAssessmentFlow = ai.defineFlow(
     name: 'initialMoodAssessmentFlow',
     inputSchema: InitialMoodAssessmentInputSchema,
     outputSchema: InitialMoodAssessmentOutputSchema,
+    model: 'googleai/gemini-2.5-pro',
   },
   async input => {
     const {output} = await initialMoodAssessmentPrompt(input);
