@@ -17,7 +17,7 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<"idle" | "active" | "stopped">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("Greetings, young one. I am your AI Sensei. I am here to help you walk your ninja way. State your purpose.");
+  const [lastBotMessage, setLastBotMessage] = useState("Greetings. I am your AI Sensei. How can I help you today?");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -265,3 +265,5 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
+
+    
