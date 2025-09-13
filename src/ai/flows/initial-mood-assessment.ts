@@ -24,7 +24,7 @@ const InitialMoodAssessmentOutputSchema = z.object({
   mood: z
     .string()
     .describe('The assessed mood of the user (e.g., calm, agitated, stressed).'),
-  transcription: z.string().describe("A transcription of the user's voice input."),
+  transcription: z.string().describe("A transcription of the user's voice input, translated into English if necessary."),
 });
 export type InitialMoodAssessmentOutput = z.infer<typeof InitialMoodAssessmentOutputSchema>;
 
@@ -36,9 +36,9 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
   name: 'initialMoodAssessmentPrompt',
   input: {schema: z.object({ voiceInput: z.string() })},
   output: {schema: InitialMoodAssessmentOutputSchema},
-  prompt: `As J.A.R.V.I.S., analyze the following audio input. Transcribe the user's speech and perform a preliminary emotional state analysis based on vocal tone and content.
+  prompt: `As J.A.R.V.I.S., analyze the following audio input. Transcribe the user's speech and perform a preliminary emotional state analysis based on vocal tone and content. If the user is speaking in a language other than English (such as Hindi), you must transcribe their speech into English.
 
-Respond with only the assessed state and the transcription.
+Respond with only the assessed state and the English transcription.
 
 Audio: {{media url=voiceInput mimeType='audio/webm'}}`,
 });

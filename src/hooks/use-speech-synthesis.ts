@@ -47,8 +47,11 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         if (!supported || speaking) return;
 
         const { text, rate = 1, pitch = 1, volume = 1, voice } = options;
+        
+        // Replace "J.A.R.V.I.S." with "Jarvis" for better pronunciation by the TTS engine.
+        const textToSpeak = text.replace(/J\.A\.R\.V\.I\.S\./g, 'Jarvis');
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.rate = rate;
         utterance.pitch = pitch;
         utterance.volume = volume;
