@@ -48,10 +48,7 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
 
         const { text, rate = 1, pitch = 1, volume = 1, voice } = options;
         
-        // Replace "J.A.R.V.I.S." with "Jarvis" for better pronunciation by the TTS engine.
-        const textToSpeak = text.replace(/J\.A\.R\.V\.I\.S\./g, 'Jarvis');
-
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = rate;
         utterance.pitch = pitch;
         utterance.volume = volume;
@@ -59,11 +56,11 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         if (voice) {
             utterance.voice = voice;
         } else {
-            // Find a suitable male, UK English voice for Jarvis.
-            const jarvisVoice = voices.find(v => v.lang === 'en-GB' && v.name.includes('Male')) || voices.find(v => v.lang === 'en-GB') || voices.find(v => v.lang.startsWith('en') && v.name.includes('David')) || voices.find(v => v.lang.startsWith('en') && v.name.includes('Google UK English Male'));
+            // Find a suitable voice for a sensei.
+            const senseiVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Male')) || voices.find(v => v.lang.startsWith('en') && v.name.includes('David')) || voices.find(v => v.lang.startsWith('en') && v.name.includes('Google US English'));
             
-            if (jarvisVoice) {
-                utterance.voice = jarvisVoice;
+            if (senseiVoice) {
+                utterance.voice = senseiVoice;
             }
         }
         

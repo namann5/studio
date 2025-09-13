@@ -1,4 +1,4 @@
-// use server'
+'use server';
 
 /**
  * @fileOverview This file defines a Genkit flow for assessing the user's mood contextually throughout a conversation.
@@ -14,12 +14,12 @@ import {z} from 'genkit';
 const AssessMoodInputSchema = z.object({
   conversationHistory: z
     .string()
-    .describe('The history of the conversation between the user and J.A.R.V.I.S.'),
+    .describe('The history of the conversation between the user and the AI Sensei.'),
 });
 export type AssessMoodInput = z.infer<typeof AssessMoodInputSchema>;
 
 const AssessMoodOutputSchema = z.object({
-  mood: z.string().describe('The assessed emotional state of the user (e.g., pleased, agitated, stressed, calm).'),
+  mood: z.string().describe('The assessed emotional state of the user (e.g., energized, frustrated, calm, determined).'),
   intensity: z
     .number()
     .min(1)
@@ -39,7 +39,7 @@ const assessMoodPrompt = ai.definePrompt({
   name: 'assessMoodPrompt',
   input: {schema: AssessMoodInputSchema},
   output: {schema: AssessMoodOutputSchema},
-  prompt: `As J.A.R.V.I.S., I will analyze the user's conversation history to perform a continuous psychological and emotional state evaluation.
+  prompt: `As an AI Sensei, I will analyze the user's conversation history to perform a continuous analysis of their emotional chakra.
 
   Analyze the following conversation history to determine the user's current state, its intensity, and the contributing factors:
 

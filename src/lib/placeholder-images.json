@@ -2,15 +2,15 @@
   "placeholderImages": [
     {
       "id": "hero-image",
-      "description": "A holographic interface showing data streams.",
-      "imageUrl": "https://picsum.photos/seed/jarvis-hero/1200/800",
-      "imageHint": "holographic interface"
+      "description": "A silhouette of a ninja standing on a cliff overlooking a village at sunset.",
+      "imageUrl": "https://picsum.photos/seed/nindo-hero/1200/800",
+      "imageHint": "ninja village"
     },
     {
       "id": "ai-avatar",
-      "description": "A glowing blue arc reactor, representing the AI's core.",
-      "imageUrl": "https://picsum.photos/seed/jarvis-avatar/256/256",
-      "imageHint": "arc reactor"
+      "description": "A stylized, glowing Konoha leaf symbol.",
+      "imageUrl": "https://picsum.photos/seed/nindo-avatar/256/256",
+      "imageHint": "leaf symbol"
     }
   ]
 }

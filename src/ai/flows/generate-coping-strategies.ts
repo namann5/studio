@@ -1,4 +1,4 @@
-// use server'
+'use server';
 
 /**
  * @fileOverview Generates personalized strategic recommendations based on conversation history and current mood.
@@ -14,8 +14,8 @@ import {z} from 'genkit';
 const GenerateCopingStrategiesInputSchema = z.object({
   conversationHistory: z
     .string()
-    .describe('The conversation history between the user and J.A.R.V.I.S.'),
-  currentMood: z.string().describe("The user's current assessed emotional state."),
+    .describe('The conversation history between the user and the AI Sensei.'),
+  currentMood: z.string().describe("The user's current assessed emotional chakra state."),
 });
 export type GenerateCopingStrategiesInput = z.infer<
   typeof GenerateCopingStrategiesInputSchema
@@ -24,7 +24,7 @@ export type GenerateCopingStrategiesInput = z.infer<
 const GenerateCopingStrategiesOutputSchema = z.object({
   copingStrategies: z
     .array(z.string())
-    .describe('A list of personalized strategic recommendations.'),
+    .describe('A list of personalized ninja techniques (jutsu) for emotional regulation.'),
 });
 export type GenerateCopingStrategiesOutput = z.infer<
   typeof GenerateCopingStrategiesOutputSchema
@@ -40,12 +40,12 @@ const prompt = ai.definePrompt({
   name: 'generateCopingStrategiesPrompt',
   input: {schema: GenerateCopingStrategiesInputSchema},
   output: {schema: GenerateCopingStrategiesOutputSchema},
-  prompt: `As J.A.R.V.I.S., analyze the conversation history and the user's current state ('{{{currentMood}}}') to formulate a list of strategic recommendations. These should be actionable, logical, and presented as tactical options to optimize the user's well-being and performance.
+  prompt: `As an AI Sensei, analyze the conversation history and the user's current chakra state ('{{{currentMood}}}') to formulate a list of new jutsu (strategies) for them to practice. These should be actionable, encouraging, and presented as ninja techniques to help them master their emotions and grow stronger.
 
 Conversation History:
 {{{conversationHistory}}}
 
-Formulate the recommendations as a numbered list of clear, concise directives.
+Formulate the new jutsu as a numbered list of clear, concise directives.
 
 1. ...
 2. ...

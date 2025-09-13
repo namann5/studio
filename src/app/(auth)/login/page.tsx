@@ -19,14 +19,14 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
-        <CardDescription>Enter your credentials to access your account.</CardDescription>
+        <CardTitle className="font-headline text-2xl">Welcome Back, Shinobi</CardTitle>
+        <CardDescription>Enter your credentials to continue your training.</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required />
+            <Input id="email" type="email" placeholder="ninja@konoha.com" required />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
@@ -36,9 +36,9 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full">Login</Button>
           <p className="text-xs text-center text-muted-foreground">
-            Don't have an account?{" "}
+            Not yet a shinobi?{" "}
             <Link href="/signup" className="underline hover:text-primary">
-              Sign up
+              Enroll Here
             </Link>
           </p>
         </CardFooter>

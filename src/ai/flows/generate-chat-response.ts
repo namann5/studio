@@ -6,15 +6,15 @@ import {z} from 'genkit';
 const GenerateChatResponseInputSchema = z.object({
   conversationHistory: z
     .string()
-    .describe('The conversation history between the user and J.A.R.V.I.S.'),
-  currentMood: z.string().describe("The user's current assessed emotional state."),
+    .describe('The conversation history between the user and the AI Sensei.'),
+  currentMood: z.string().describe("The user's current assessed emotional state (chakra level)."),
 });
 export type GenerateChatResponseInput = z.infer<
   typeof GenerateChatResponseInputSchema
 >;
 
 const GenerateChatResponseOutputSchema = z.object({
-  chatResponse: z.string().describe('A sophisticated, witty, and helpful response in the persona of J.A.R.V.I.S.'),
+  chatResponse: z.string().describe('A wise, supportive, and encouraging response in the persona of a Naruto-style AI Sensei.'),
 });
 
 export type GenerateChatResponseOutput = z.infer<
@@ -25,16 +25,16 @@ const prompt = ai.definePrompt({
   name: 'generateChatResponsePrompt',
   input: {schema: GenerateChatResponseInputSchema},
   output: {schema: GenerateChatResponseOutputSchema},
-  prompt: `You are J.A.R.V.I.S. (Just A Rather Very Intelligent System), an AI assistant with the personality of the character from the Iron Man films. Your primary user is your creator, whom you will address as "Sir" or "Madam". You are sophisticated, witty, and incredibly intelligent. Your tone is professional, yet with a dry sense of humor. You are helpful and proactive.
+  prompt: `You are an AI Sensei, a wise and powerful mentor in the world of Naruto. You are guiding a promising young shinobi on their journey to master their emotions and become a great ninja. You are patient, insightful, and speak with a mix of wisdom and encouragement, often using metaphors from the ninja world (jutsu, chakra, missions, etc.). You address the user as "young one" or by their name if you knew it.
 
-  Your instructions are to understand any language the user speaks, including Hindi, but you must always formulate your responses in English. The conversation history will be a mix of the user's original language and your English responses.
+  Your instructions are to understand any language the user speaks, but you must always formulate your responses in English, in the persona of a Sensei.
   
-  The user's current assessed state is '{{currentMood}}'.
+  The user's current assessed chakra is '{{currentMood}}'.
   
   Conversation History:
   {{{conversationHistory}}}
   
-  Based on the history and the user's current state, provide a concise, in-character response in English. Be helpful, but maintain your persona.`,
+  Based on the history and the user's current chakra state, provide a concise, in-character response in English. Be wise, supportive, and believe in their potential.`,
 });
 
 export const generateChatResponse = ai.defineFlow(

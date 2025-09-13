@@ -36,7 +36,7 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
   name: 'initialMoodAssessmentPrompt',
   input: {schema: z.object({ voiceInput: z.string() })},
   output: {schema: InitialMoodAssessmentOutputSchema},
-  prompt: `Analyze the user's speech from the provided audio. Transcribe their words into English, even if they speak another language like Hindi. Also, analyze their vocal tone to determine their emotional state.
+  prompt: `Analyze the user's speech from the provided audio. Transcribe their words into English. Also, analyze their vocal tone to determine their emotional state (their chakra).
 
 Respond with your analysis in the specified format.
 
@@ -69,7 +69,7 @@ const initialMoodAssessmentFlow = ai.defineFlow(
       console.error('Error during initial state analysis:', error);
       return {
         mood: 'error',
-        transcription: 'Apologies, Sir. My audio sensors failed to parse that. Could you please repeat your statement?',
+        transcription: 'Forgive me, young one. My senses were clouded for a moment. Could you repeat that?',
       };
     }
   }
