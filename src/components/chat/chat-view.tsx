@@ -30,17 +30,11 @@ export function ChatView() {
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
-      setSessionState(current => (current === 'speaking' ? 'listening' : current));
+      if (sessionState === 'speaking') {
+        setSessionState('listening');
+      }
     },
   });
-
-  useEffect(() => {
-    if (speaking && sessionState !== 'speaking') {
-      setSessionState("speaking");
-    } else if (!speaking && sessionState === 'speaking') {
-      setSessionState('listening');
-    }
-  }, [speaking, sessionState]);
 
   const addMessage = useCallback((role: "user" | "assistant", content: string) => {
     const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
@@ -48,8 +42,14 @@ export function ChatView() {
     if (role === "assistant") {
       setLastBotMessage(content);
       speak({ text: content });
+      // This is a failsafe to ensure we transition to listening if the onEnd doesn't fire.
+      if (messages.length === 0) {
+        setTimeout(() => {
+          setSessionState('listening');
+        }, 2000); // Give it a moment to start speaking
+      }
     }
-  }, [speak]);
+  }, [speak, messages.length]);
 
   const handleAiResponse = useCallback(async (transcription: string) => {
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
@@ -107,6 +107,10 @@ export function ChatView() {
             })
             const errorResponse = "My apologies. My sensors encountered an anomaly. Please try again.";
             addMessage("assistant", errorResponse);
+        } finally {
+            if (sessionState !== 'speaking') {
+                setSessionState('listening');
+            }
         }
     });
   }
@@ -144,6 +148,7 @@ export function ChatView() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
     }
+    // Stay in listening state until processing is done
   };
   
   const startConversation = () => {
@@ -159,11 +164,14 @@ export function ChatView() {
     }
     setSessionState("idle");
     setLastBotMessage("Session ended. Have a good day.");
+    setMessages([]);
   }
 
   const handleGetStrategies = () => {
     if (speaking) cancel();
-    stopRecording();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        stopRecording();
+    }
     setSessionState("processing");
     startTransition(async () => {
         try {
@@ -178,9 +186,17 @@ export function ChatView() {
             })
             const errorResponse = "I'm afraid I cannot generate new techniques at this time. Please try again later.";
             addMessage("assistant", errorResponse);
+        } finally {
+            setSessionState('listening');
         }
     });
   }
+  
+  useEffect(() => {
+    if (speaking && sessionState !== 'speaking') {
+      setSessionState("speaking");
+    }
+  }, [speaking, sessionState]);
 
   const isListening = sessionState === 'listening';
   const isProcessing = sessionState === 'processing';
@@ -191,17 +207,24 @@ export function ChatView() {
     if (sessionState === 'idle') return "Press 'Begin Session' to start.";
     if (isProcessing) return "Processing...";
     if (isSpeaking) return lastBotMessage;
-    if (isListening) return "Listening... Press the Mic to stop.";
+    if (isListening) {
+         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+            return "Listening... Press the Mic to stop and process.";
+         }
+         return "Press the Mic to speak.";
+    }
     return lastBotMessage;
   };
 
   const getAvatarClass = () => {
     if (isSpeaking) return "shadow-[0_0_40px_8px_hsl(var(--primary))]";
     if (isProcessing || isPending) return "scale-110 shadow-[0_0_50px_10px_hsl(var(--accent))] animate-pulse";
-    if (isListening) return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
+    if (mediaRecorderRef.current?.state === "recording") return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
     return "";
   };
   
+  const isRecording = mediaRecorderRef.current?.state === 'recording';
+
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
@@ -224,7 +247,7 @@ export function ChatView() {
         </div>
 
         <div className="absolute top-0 right-0 p-4">
-            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isSessionActive || isProcessing || isSpeaking || isListening}>
+            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isSessionActive || isProcessing || isSpeaking || isRecording}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
                 New Strategies
             </Button>
@@ -244,12 +267,12 @@ export function ChatView() {
             ) : (
               <div className="flex items-center gap-4">
                 <Button 
-                  onClick={isListening ? stopRecording : startRecording} 
+                  onClick={isRecording ? stopRecording : startRecording} 
                   size="icon" 
                   className="rounded-full w-16 h-16"
                   disabled={isProcessing || isSpeaking}
                 >
-                  {isListening ? <Square className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+                  {isProcessing ? <Loader className="w-8 h-8 animate-spin" /> : (isRecording ? <Square className="w-8 h-8" /> : <Mic className="w-8 h-8" />)}
                 </Button>
                 <Button onClick={endConversation} variant="destructive" size="lg" className="rounded-full">
                     <Power className="mr-2" /> End Session
