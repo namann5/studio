@@ -93,8 +93,6 @@ const convertAudioToWavFlow = ai.defineFlow(
       }
       const inputBuffer = Buffer.from(base64Data, 'base64');
       
-      // Since we don't have a reliable pure JS webm decoder, we need a tool like FFMPEG
-      // I will assume fluent-ffmpeg is now in the package.json and will be installed.
       const wavBuffer = await convertWithFfmpeg(inputBuffer);
       
       const wavDataUri = `data:audio/wav;base64,${wavBuffer.toString('base64')}`;
@@ -104,7 +102,7 @@ const convertAudioToWavFlow = ai.defineFlow(
     } catch (error: any) {
       console.error('Error converting audio to WAV:', error);
       // Return an empty data URI in case of error to avoid breaking the calling flow.
-      return { wavDataUri: 'data:audio/wav;base64,' };
+      return { wavDataUri: '' };
     }
   }
 );

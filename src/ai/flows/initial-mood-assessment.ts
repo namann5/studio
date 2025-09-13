@@ -58,6 +58,17 @@ const initialMoodAssessmentFlow = ai.defineFlow(
   async input => {
     // Convert WebM to WAV before sending to the prompt
     const wavAudio = await convertAudioToWav(input);
+
+    // If conversion failed, wavDataUri will be empty.
+    if (!wavAudio.wavDataUri || !wavAudio.wavDataUri.split(',')[1]) {
+      // Return a response indicating failure.
+      return {
+        mood: 'unknown',
+        confidence: 0,
+        transcription: '',
+      };
+    }
+
     const {output} = await initialMoodAssessmentPrompt({ voiceInput: wavAudio.wavDataUri });
     return output!;
   }
