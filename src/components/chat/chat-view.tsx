@@ -17,7 +17,7 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<"idle" | "active" | "stopped">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("Greetings. I am your AI Sensei. Speak, and I shall listen.");
+  const [lastBotMessage, setLastBotMessage] = useState("Greetings. I am your AI assistant. Speak, and I shall listen.");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -54,11 +54,11 @@ export function ChatView() {
       } catch(error) {
         console.error("Error getting AI response:", error);
         toast({
-          title: "Jutsu Failed",
-          description: "There was a failure in the response matrix.",
+          title: "Response Error",
+          description: "There was an error generating a response.",
           variant: "destructive"
         });
-        const errorResponse = "Apologies, young one. My connection to the spirit world is weak. Could you repeat that?";
+        const errorResponse = "Apologies. My response systems encountered an error. Could you repeat that?";
         addMessage("assistant", errorResponse);
         speak({ text: errorResponse });
       }
@@ -77,7 +77,7 @@ export function ChatView() {
       stopRecording();
     }
     setSessionState("stopped");
-    setLastBotMessage("Session ended. Rest well, shinobi.");
+    setLastBotMessage("Session ended. Have a good day.");
   }
 
   const handleVoiceSubmit = (audioBlob: Blob) => {
@@ -100,7 +100,7 @@ export function ChatView() {
                   setCurrentMood(mood);
                   await handleAiResponse(transcription);
                 } else {
-                   const errorResponse = "Forgive me, young one. I didn't catch that. Could you say it again?";
+                   const errorResponse = "Apologies. I didn't catch that. Could you say it again?";
                    addMessage("assistant", errorResponse);
                    speak({ text: errorResponse });
                 }
@@ -108,11 +108,11 @@ export function ChatView() {
         } catch (error) {
             console.error("Error Processing Voice", error);
             toast({
-              title: "Chakra Disruption",
-              description: "There was an issue processing your vocal chakra.",
+              title: "Audio Processing Error",
+              description: "There was an issue processing your audio.",
               variant: "destructive"
             })
-            const errorResponse = "My apologies, young one. My senses encountered an anomaly. Please try again.";
+            const errorResponse = "My apologies. My sensors encountered an anomaly. Please try again.";
             addMessage("assistant", errorResponse);
             speak({ text: errorResponse });
         }
@@ -124,16 +124,16 @@ export function ChatView() {
     startTransition(async () => {
         try {
             const strategies = await getCopingStrategies(messages, currentMood);
-            const strategyText = `Of course. Here are some new jutsu to practice based on your current chakra:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+            const strategyText = `Of course. Here are some new strategies to practice based on your current state:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
             addMessage("assistant", strategyText);
             speak({ text: strategyText });
         } catch (error) {
             toast({
-              title: "Training Failed",
-              description: "Could not generate new jutsu.",
+              title: "Strategy Failed",
+              description: "Could not generate new strategies.",
               variant: "destructive"
             })
-            const errorResponse = "I'm afraid I cannot generate new techniques with the current data. We must analyze your chakra further.";
+            const errorResponse = "I'm afraid I cannot generate new techniques at this time. Please try again later.";
             addMessage("assistant", errorResponse);
             speak({ text: errorResponse });
         }
@@ -160,7 +160,7 @@ export function ChatView() {
       mediaRecorderRef.current.start();
     } catch (error) {
       console.error("Error accessing microphone", error);
-      toast({ title: "Mic Malfunction", description: "Could not establish a link to your communication device.", variant: "destructive" });
+      toast({ title: "Mic Error", description: "Could not access your microphone.", variant: "destructive" });
       setIsRecording(false);
     }
   };
@@ -197,7 +197,7 @@ export function ChatView() {
         <div className="absolute top-0 right-0 p-4">
             <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending || speaking || sessionState !== 'active'}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
-                New Jutsu
+                New Strategies
             </Button>
         </div>
 
@@ -210,7 +210,7 @@ export function ChatView() {
         <div className="absolute bottom-10 flex flex-col items-center gap-4">
             {sessionState === "idle" && (
                 <Button onClick={startConversation} size="lg" className="rounded-full">
-                    <Play className="mr-2" /> Begin Training
+                    <Play className="mr-2" /> Begin Session
                 </Button>
             )}
             {sessionState === "active" && (
@@ -227,13 +227,13 @@ export function ChatView() {
                     <Mic className="w-8 h-8"/>
                   </Button>
                  <Button onClick={endConversation} variant="destructive" size="sm">
-                    <Square className="mr-2" /> End Training
+                    <Square className="mr-2" /> End Session
                  </Button>
                 </>
             )}
              {sessionState === "stopped" && (
                 <Button onClick={() => window.location.reload()} size="lg" className="rounded-full">
-                    <Play className="mr-2" /> Re-engage
+                    <Play className="mr-2" /> Restart Session
                 </Button>
             )}
         </div>
@@ -249,15 +249,15 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                         <AlertTriangle className="text-destructive w-6 h-6" />
-                        A Critical Warning!
+                        Important Alert
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        Your chakra feels dangerously low, young one. A true shinobi knows when to seek aid. Please, connect with the village's crisis support line. You do not have to carry this burden alone.
+                        It sounds like you are in significant distress. Please know that help is available. You can connect with a crisis support line to talk to someone. You do not have to go through this alone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogAction asChild>
-                        <a href="tel:988">Contact ANBU Support: 988</a>
+                        <a href="tel:988">Contact Support: 988</a>
                     </AlertDialogAction>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Dismiss</Button>
                 </AlertDialogFooter>

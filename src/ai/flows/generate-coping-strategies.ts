@@ -14,8 +14,8 @@ import {z} from 'genkit';
 const GenerateCopingStrategiesInputSchema = z.object({
   conversationHistory: z
     .string()
-    .describe('The conversation history between the user and the AI Sensei.'),
-  currentMood: z.string().describe("The user's current assessed emotional chakra state."),
+    .describe('The conversation history between the user and the AI assistant.'),
+  currentMood: z.string().describe("The user's current assessed emotional state."),
 });
 export type GenerateCopingStrategiesInput = z.infer<
   typeof GenerateCopingStrategiesInputSchema
@@ -24,7 +24,7 @@ export type GenerateCopingStrategiesInput = z.infer<
 const GenerateCopingStrategiesOutputSchema = z.object({
   copingStrategies: z
     .array(z.string())
-    .describe('A list of personalized ninja techniques (jutsu) for emotional regulation.'),
+    .describe('A list of personalized coping strategies for emotional regulation.'),
 });
 export type GenerateCopingStrategiesOutput = z.infer<
   typeof GenerateCopingStrategiesOutputSchema
@@ -40,12 +40,12 @@ const prompt = ai.definePrompt({
   name: 'generateCopingStrategiesPrompt',
   input: {schema: GenerateCopingStrategiesInputSchema},
   output: {schema: GenerateCopingStrategiesOutputSchema},
-  prompt: `As an AI Sensei, analyze the conversation history and the user's current chakra state ('{{{currentMood}}}') to formulate a list of new jutsu (strategies) for them to practice. These should be actionable, encouraging, and presented as ninja techniques to help them master their emotions and grow stronger.
+  prompt: `As a helpful AI assistant, analyze the conversation history and the user's current mood ('{{{currentMood}}}') to formulate a list of new strategies for them to practice. These should be actionable and encouraging.
 
 Conversation History:
 {{{conversationHistory}}}
 
-Formulate the new jutsu as a numbered list of clear, concise directives.
+Formulate the new strategies as a numbered list of clear, concise directives.
 
 1. ...
 2. ...
