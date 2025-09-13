@@ -45,8 +45,11 @@ export function ChatView() {
     if (role === "assistant") {
       setLastBotMessage(content);
       speak({ text: content });
+       if (content.startsWith("Hello")) {
+        setSessionState("speaking");
+      }
     }
-  }, [speak]);
+  }, [speak, sessionState]);
 
   const handleAiResponse = useCallback(async (transcription: string) => {
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
@@ -111,12 +114,13 @@ export function ChatView() {
 
   const startRecording = async () => {
     if (speaking) cancel(); 
-    setSessionState("listening");
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       audioChunksRef.current = [];
+      setSessionState("listening");
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -131,12 +135,10 @@ export function ChatView() {
           // If there's no real audio, just go back to listening state
           setSessionState('listening');
         }
-        // Stop all tracks on the stream.
-        streamRef.current?.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
+        audioChunksRef.current = [];
       };
 
-      mediaRecorderRef.current.start();
+      mediaRecorder-ref.current.start();
     } catch (error) {
       console.error("Error accessing microphone:", error);
       toast({
@@ -151,7 +153,8 @@ export function ChatView() {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
-      // Transition to processing while we wait for the onstop handler
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
       setSessionState("processing"); 
     }
   };
@@ -159,14 +162,12 @@ export function ChatView() {
   const startConversation = () => {
     const greeting = "Hello. I'm here to listen. Feel free to share what's on your mind.";
     addMessage("assistant", greeting);
-    // After greeting, immediately go to listening state
-    setSessionState('speaking');
   };
   
   const endConversation = () => {
     if (speaking) cancel();
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
+      stopRecording();
     }
     setSessionState("idle");
     setLastBotMessage("Session ended. Take care.");
@@ -318,5 +319,7 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
+
+    
 
     
