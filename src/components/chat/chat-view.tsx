@@ -160,7 +160,7 @@ export function ChatView() {
   const endConversation = () => {
     if (speaking) cancel();
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      stopRecording();
+      mediaRecorderRef.current.stop();
     }
     setSessionState("idle");
     setLastBotMessage("Session ended. Have a good day.");
