@@ -15,7 +15,7 @@ const InitialMoodAssessmentInputSchema = z.object({
   voiceInput: z
     .string()
     .describe(
-      "The user's voice input, as a data URI. Expected format: 'data:audio/webm;base64,<encoded_data>'"
+      "The user's voice input, as a data URI. Expected format: 'data:audio/wav;base64,<encoded_data>'"
     ),
 });
 export type InitialMoodAssessmentInput = z.infer<typeof InitialMoodAssessmentInputSchema>;
@@ -51,7 +51,7 @@ const initialMoodAssessmentFlow = ai.defineFlow(
   },
   async input => {
     // Check for valid base64 data. A simple check for minimum length.
-    if (!input.voiceInput || !input.voiceInput.startsWith('data:audio/webm;base64,') || input.voiceInput.split(',')[1].length < 1000) {
+    if (!input.voiceInput || !input.voiceInput.startsWith('data:audio/wav;base64,') || input.voiceInput.split(',')[1].length < 100) {
       console.error('Initial State Analysis: Invalid or empty voice input data URI.');
       return {
         mood: 'unknown',

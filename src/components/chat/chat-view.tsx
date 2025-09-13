@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useRef, useTransition, useCallback, useEffect } from "react";
+import { useState, useTransition, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, AlertTriangle, Play, Mic, Loader, Power, Square } from "lucide-react";
+import { BrainCircuit, AlertTriangle, Play, Loader, Power, Mic } from "lucide-react";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { useVAD } from "@/hooks/use-vad";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
@@ -25,10 +26,6 @@ export function ChatView() {
   
   const aiAvatar = PlaceHolderImages.find(img => img.id === 'ai-avatar');
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
       if (sessionState === 'speaking') {
@@ -37,41 +34,8 @@ export function ChatView() {
     },
   });
 
-  const addMessage = useCallback((role: "user" | "assistant", content: string) => {
-    const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
-    setMessages(prev => [...prev, newMessage]);
-    if (role === "assistant") {
-      setLastBotMessage(content);
-      speak({ text: content });
-      if (content.startsWith("HELLO")) {
-        setSessionState("speaking");
-      }
-    }
-  }, [speak, sessionState]);
-
-  const handleAiResponse = useCallback(async (transcription: string) => {
-    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
-    const currentHistory = [...messages, userMessage];
-    setMessages(prev => [...prev, userMessage]);
-  
-    startTransition(async () => {
-      try {
-        const responseText = await getAiResponse(currentHistory, currentMood);
-        addMessage("assistant", responseText);
-      } catch(error) {
-        console.error("Error getting AI response:", error);
-        toast({
-          title: "Response Error",
-          description: "There was an error generating a response.",
-          variant: "destructive"
-        });
-        const errorResponse = "I'm sorry, I encountered an error trying to respond. Please try again.";
-        addMessage("assistant", errorResponse);
-      }
-    });
-  }, [messages, currentMood, addMessage, toast]);
-  
   const handleVoiceSubmit = useCallback((audioBlob: Blob) => {
+    setSessionState("processing");
     startTransition(async () => {
       try {
         const reader = new FileReader();
@@ -87,7 +51,24 @@ export function ChatView() {
               setShowSafetyAlert(true);
             }
             setCurrentMood(mood);
-            await handleAiResponse(transcription);
+            
+            const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
+            const currentHistory = [...messages, userMessage];
+            setMessages(prev => [...prev, userMessage]);
+
+            try {
+              const responseText = await getAiResponse(currentHistory, mood);
+              addMessage("assistant", responseText);
+            } catch(error) {
+              console.error("Error getting AI response:", error);
+              toast({
+                title: "Response Error",
+                description: "There was an error generating a response.",
+                variant: "destructive"
+              });
+              const errorResponse = "I'm sorry, I encountered an error trying to respond. Please try again.";
+              addMessage("assistant", errorResponse);
+            }
           } else {
             const errorResponse = "I'm sorry, I didn't catch that. Could you please say it again?";
             addMessage("assistant", errorResponse);
@@ -104,67 +85,45 @@ export function ChatView() {
         addMessage("assistant", errorResponse);
       }
     });
-  }, [addMessage, handleAiResponse, toast]);
+  }, [messages, addMessage, toast]);
 
-  const startRecording = async () => {
-    if (speaking) cancel();
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-      
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
 
-      recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        audioChunksRef.current = [];
-        if (audioBlob.size > 1000) { 
-          handleVoiceSubmit(audioBlob);
-        } else {
-          setSessionState('listening');
-        }
-      };
-
-      recorder.start();
-      setSessionState("listening");
-
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
+  const vad = useVAD({
+    onSpeechEnd: (audio) => {
+      handleVoiceSubmit(audio);
+    },
+    onVADMisfire: () => {
+      addMessage("assistant", "It seems I'm still not detecting any speech. Could you speak up?");
+    },
+    onError(error) {
+      console.error("VAD Error:", error);
       toast({
         title: "Microphone Error",
         description: "Could not access the microphone. Please check your browser permissions.",
         variant: "destructive",
       });
       setSessionState("idle");
-    }
-  };
+    },
+  });
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      setSessionState("processing"); 
-      mediaRecorderRef.current.stop();
-      streamRef.current?.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+  const addMessage = useCallback((role: "user" | "assistant", content: string) => {
+    const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
+    setMessages(prev => [...prev, newMessage]);
+    if (role === "assistant") {
+      setLastBotMessage(content);
+      speak({ text: content });
+      setSessionState("speaking");
     }
-  };
-  
+  }, [speak]);
+
   const startConversation = () => {
+    vad.start();
     addMessage("assistant", "HELLO");
   };
   
   const endConversation = () => {
     if (speaking) cancel();
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      stopRecording();
-    }
+    vad.stop();
     setSessionState("idle");
     setLastBotMessage("Session ended. Take care.");
     setMessages([]);
@@ -172,9 +131,7 @@ export function ChatView() {
 
   const handleGetStrategies = () => {
     if (speaking) cancel();
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        stopRecording();
-    }
+    vad.pause();
     setSessionState("processing");
     startTransition(async () => {
         try {
@@ -189,6 +146,8 @@ export function ChatView() {
             })
             const errorResponse = "I'm sorry, I was unable to generate strategies at this moment. Please try again later.";
             addMessage("assistant", errorResponse);
+        } finally {
+            vad.start();
         }
     });
   }
@@ -198,37 +157,29 @@ export function ChatView() {
       setSessionState("speaking");
     } else if (!speaking && sessionState === 'speaking') {
       setSessionState('listening');
+      if (vad.listening) vad.start();
     }
-  }, [speaking, sessionState]);
+  }, [speaking, sessionState, vad]);
 
-  const isRecording = sessionState === 'listening' && mediaRecorderRef.current?.state === 'recording';
   const isProcessing = sessionState === 'processing' || isPending;
   const isSpeaking = sessionState === 'speaking';
+  const isListening = sessionState === 'listening';
   const isSessionActive = sessionState !== 'idle';
   
   const getStatusText = () => {
     if (sessionState === 'idle') return "Press 'Begin Session' to start.";
     if (isProcessing) return "Processing...";
     if (isSpeaking) return lastBotMessage;
-    if (isRecording) return "Listening... Press the Mic to stop.";
-    if (sessionState === 'listening') return "Press the Mic to speak.";
+    if (isListening) return "Listening...";
     return "Ready."; // Fallback status
   };
 
   const getAvatarClass = () => {
     if (isSpeaking) return "shadow-[0_0_40px_8px_hsl(var(--primary))]";
     if (isProcessing) return "scale-110 shadow-[0_0_50px_10px_hsl(var(--accent))] animate-pulse";
-    if (isRecording) return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
+    if (isListening) return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
     return "";
   };
-
-  const handleMicClick = () => {
-    if (isRecording) {
-      stopRecording();
-    } else if (sessionState === 'listening') {
-      startRecording();
-    }
-  }
 
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
@@ -252,7 +203,7 @@ export function ChatView() {
         </div>
 
         <div className="absolute top-0 right-0 p-4">
-            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isSessionActive || isProcessing || isSpeaking || isRecording}>
+            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isSessionActive || isProcessing || isSpeaking}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
                 Coping Strategies
             </Button>
@@ -271,14 +222,7 @@ export function ChatView() {
                 </Button>
             ) : (
               <div className="flex items-center gap-4">
-                <Button 
-                  onClick={handleMicClick}
-                  size="icon" 
-                  className="rounded-full w-16 h-16"
-                  disabled={isProcessing || isSpeaking}
-                >
-                  {isProcessing ? <Loader className="w-8 h-8 animate-spin" /> : (isRecording ? <Square className="w-8 h-8" /> : <Mic className="w-8 h-8" />)}
-                </Button>
+                 {isProcessing ? <Loader className="w-8 h-8 animate-spin text-primary" /> : <Mic className={cn("w-8 h-8", isListening ? 'text-primary' : 'text-muted-foreground')} />}
                 <Button onClick={endConversation} variant="destructive" size="lg" className="rounded-full">
                     <Power className="mr-2" /> End Session
                 </Button>
