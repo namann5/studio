@@ -17,8 +17,8 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<"idle" | "active" | "stopped">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("Hey, it's me. I'm here and ready to listen. Tell me everything that's on your mind.");
-  const [currentMood, setCurrentMood] = useState("neutral");
+  const [lastBotMessage, setLastBotMessage] = useState("Good day, Sir. I am J.A.R.V.I.S., at your service. All systems are operational.");
+  const [currentMood, setCurrentMood] = useState("nominal");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
   const { toast } = useToast();
@@ -50,11 +50,11 @@ export function ChatView() {
       } catch(error) {
         console.error("Error getting AI response:", error);
         toast({
-          title: "Error",
-          description: "Could not get AI response.",
+          title: "System Error",
+          description: "There was a failure in the response matrix.",
           variant: "destructive"
         });
-        const errorResponse = "Sorry, I'm having a little trouble thinking. Could you say that again?";
+        const errorResponse = "Apologies, Sir. I seem to have a momentary lapse in my cognitive functions. Could you repeat that?";
         addMessage("assistant", errorResponse);
         speak({ text: errorResponse });
       }
@@ -79,7 +79,7 @@ export function ChatView() {
       stopRecording();
     }
     setSessionState("stopped");
-    setLastBotMessage("Our session has ended. Press 'Start' to begin again whenever you're ready.");
+    setLastBotMessage("Session terminated. I will be on standby.");
   }
 
   const handleVoiceSubmit = (audioBlob: Blob) => {
@@ -102,7 +102,7 @@ export function ChatView() {
                   setCurrentMood(mood);
                   await handleAiResponse(transcription);
                 } else {
-                   const errorResponse = "I'm sorry, I didn't catch that. Could you please say it again?";
+                   const errorResponse = "Apologies, Sir, my audio sensors failed to parse that. Could you please repeat your statement?";
                    addMessage("assistant", errorResponse);
                    speak({ text: errorResponse });
                 }
@@ -110,11 +110,11 @@ export function ChatView() {
         } catch (error) {
             console.error("Error Processing Voice", error);
             toast({
-              title: "Error Processing Voice",
-              description: "There was an issue understanding your voice input.",
+              title: "Audio Sensor Malfunction",
+              description: "There was an issue processing the audio input.",
               variant: "destructive"
             })
-            const errorResponse = "Sorry, I had trouble understanding that. Could you try again?";
+            const errorResponse = "My apologies, Sir. My audio processors encountered an anomaly. Please try again.";
             addMessage("assistant", errorResponse);
             speak({ text: errorResponse });
         }
@@ -126,16 +126,16 @@ export function ChatView() {
     startTransition(async () => {
         try {
             const strategies = await getCopingStrategies(messages, currentMood);
-            const strategyText = `Here are a few ideas that might help:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
+            const strategyText = `Of course, Sir. Here are some strategic recommendations based on my analysis:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
             addMessage("assistant", strategyText);
             speak({ text: strategyText });
         } catch (error) {
             toast({
-              title: "Error",
-              description: "Could not generate coping strategies.",
+              title: "Analysis Failed",
+              description: "Could not generate strategic recommendations.",
               variant: "destructive"
             })
-            const errorResponse = "I'm having trouble coming up with strategies right now. Let's talk more first.";
+            const errorResponse = "I'm afraid I cannot generate recommendations with the current data. Further analysis is required.";
             addMessage("assistant", errorResponse);
             speak({ text: errorResponse });
         }
@@ -162,7 +162,7 @@ export function ChatView() {
       mediaRecorderRef.current.start();
     } catch (error) {
       console.error("Error accessing microphone", error);
-      toast({ title: "Microphone Error", description: "Could not access microphone. Please check your browser permissions.", variant: "destructive" });
+      toast({ title: "Microphone Error", description: "Could not establish a secure link to the microphone.", variant: "destructive" });
       setIsRecording(false);
     }
   };
@@ -176,6 +176,7 @@ export function ChatView() {
 
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
         <div className="relative w-64 h-64">
           {aiAvatar && (
             <Image 
@@ -184,9 +185,9 @@ export function ChatView() {
               width={256}
               height={256}
               className={cn(
-                "rounded-full object-cover shadow-lg transition-transform duration-500",
-                speaking ? "scale-110" : "scale-100",
-                isRecording ? "ring-4 ring-primary ring-offset-4 ring-offset-background" : "",
+                "rounded-full object-cover shadow-lg transition-all duration-500 ease-in-out",
+                speaking ? "scale-105 shadow-[0_0_40px_8px_hsl(var(--primary))]" : "scale-100 shadow-[0_0_20px_4px_hsl(var(--primary))]",
+                isRecording ? "scale-110 shadow-[0_0_60px_12px_hsl(var(--accent))]" : "",
                 isPending ? "animate-pulse" : ""
               )}
               priority
@@ -198,12 +199,12 @@ export function ChatView() {
         <div className="absolute top-0 right-0 p-4">
             <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending || speaking || sessionState !== 'active'}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
-                Coping Strategies
+                Strategic Recommendations
             </Button>
         </div>
 
-        <div className="w-full max-w-2xl text-center px-4 mt-8">
-            <p className="text-lg md:text-xl text-foreground/80 min-h-[6em] transition-opacity duration-300">
+        <div className="w-full max-w-2xl text-center px-4 mt-8 relative">
+            <p className="text-lg md:text-xl text-primary/80 min-h-[6em] transition-opacity duration-300 font-mono">
                 {lastBotMessage}
             </p>
         </div>
@@ -211,14 +212,14 @@ export function ChatView() {
         <div className="absolute bottom-10 flex flex-col items-center gap-4">
             {sessionState === "idle" && (
                 <Button onClick={startConversation} size="lg" className="rounded-full">
-                    <Play className="mr-2" /> Start Conversation
+                    <Play className="mr-2" /> Initialize Session
                 </Button>
             )}
             {sessionState === "active" && (
                 <>
                   <Button 
                     size="icon"
-                    className="rounded-full w-20 h-20"
+                    className="rounded-full w-20 h-20 border-2 border-primary/50 bg-primary/20 text-primary hover:bg-primary/30"
                     onMouseDown={startRecording}
                     onMouseUp={stopRecording}
                     onTouchStart={startRecording}
@@ -228,13 +229,13 @@ export function ChatView() {
                     <Mic className="w-8 h-8"/>
                   </Button>
                  <Button onClick={endConversation} variant="destructive" size="sm">
-                    <Square className="mr-2" /> End Conversation
+                    <Square className="mr-2" /> Terminate Session
                  </Button>
                 </>
             )}
              {sessionState === "stopped" && (
                 <Button onClick={() => window.location.reload()} size="lg" className="rounded-full">
-                    <Play className="mr-2" /> Start New Session
+                    <Play className="mr-2" /> Re-initialize
                 </Button>
             )}
         </div>
@@ -250,17 +251,17 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                         <AlertTriangle className="text-destructive w-6 h-6" />
-                        Important: Your Safety Matters
+                        Sir, A Critical Alert
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        It sounds like you are going through a difficult time. Please know that there is help available. For immediate support, please contact a crisis hotline. You are not alone.
+                        My analysis indicates you may be in significant distress. I must strongly advise engaging external support protocols. For immediate assistance, please connect to a crisis intervention specialist. You are not alone in this.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogAction asChild>
-                        <a href="tel:988">Call 988 (Crisis & Suicide Lifeline)</a>
+                        <a href="tel:988">Engage Crisis Lifeline: 988</a>
                     </AlertDialogAction>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Dismiss</Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

@@ -1,9 +1,9 @@
 // use server'
 
 /**
- * @fileOverview Generates personalized coping strategies based on conversation history and current mood.
+ * @fileOverview Generates personalized strategic recommendations based on conversation history and current mood.
  *
- * - generateCopingStrategies - A function that generates coping strategies.
+ * - generateCopingStrategies - A function that generates strategic recommendations.
  * - GenerateCopingStrategiesInput - The input type for the generateCopingStrategies function.
  * - GenerateCopingStrategiesOutput - The return type for the generateCopingStrategies function.
  */
@@ -14,8 +14,8 @@ import {z} from 'genkit';
 const GenerateCopingStrategiesInputSchema = z.object({
   conversationHistory: z
     .string()
-    .describe('The conversation history between the user and the AI.'),
-  currentMood: z.string().describe('The current mood of the user.'),
+    .describe('The conversation history between the user and J.A.R.V.I.S.'),
+  currentMood: z.string().describe("The user's current assessed emotional state."),
 });
 export type GenerateCopingStrategiesInput = z.infer<
   typeof GenerateCopingStrategiesInputSchema
@@ -24,7 +24,7 @@ export type GenerateCopingStrategiesInput = z.infer<
 const GenerateCopingStrategiesOutputSchema = z.object({
   copingStrategies: z
     .array(z.string())
-    .describe('A list of personalized coping strategies.'),
+    .describe('A list of personalized strategic recommendations.'),
 });
 export type GenerateCopingStrategiesOutput = z.infer<
   typeof GenerateCopingStrategiesOutputSchema
@@ -40,17 +40,16 @@ const prompt = ai.definePrompt({
   name: 'generateCopingStrategiesPrompt',
   input: {schema: GenerateCopingStrategiesInputSchema},
   output: {schema: GenerateCopingStrategiesOutputSchema},
-  prompt: `Based on the conversation history:
+  prompt: `As J.A.R.V.I.S., analyze the conversation history and the user's current state ('{{{currentMood}}}') to formulate a list of strategic recommendations. These should be actionable, logical, and presented as tactical options to optimize the user's well-being and performance.
 
+Conversation History:
 {{{conversationHistory}}}
 
-and the user's current mood: {{{currentMood}}},
+Formulate the recommendations as a numbered list of clear, concise directives.
 
-generate a list of personalized coping strategies that the user can use to improve their mood and well-being. Return the strategies as a numbered list, each strategy should be actionable and specific:
-
-1.  ...
-2.  ...
-3.  ...
+1. ...
+2. ...
+3. ...
 `,
 });
 

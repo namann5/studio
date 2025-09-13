@@ -2,33 +2,15 @@
   "placeholderImages": [
     {
       "id": "hero-image",
-      "description": "A calming abstract image representing mental clarity and peace.",
-      "imageUrl": "https://picsum.photos/seed/seista-hero/1200/800",
-      "imageHint": "calm abstract"
-    },
-    {
-      "id": "feature-chat",
-      "description": "An illustration of a friendly chat interface.",
-      "imageUrl": "https://picsum.photos/seed/seista-chat/600/400",
-      "imageHint": "chat interface"
-    },
-    {
-      "id": "feature-dashboard",
-      "description": "An illustration of a dashboard with charts and graphs.",
-      "imageUrl": "https://picsum.photos/seed/seista-dashboard/600/400",
-      "imageHint": "dashboard chart"
-    },
-    {
-      "id": "feature-voice",
-      "description": "An illustration of a microphone icon for voice input.",
-      "imageUrl": "https://picsum.photos/seed/seista-voice/600/400",
-      "imageHint": "microphone icon"
+      "description": "A holographic interface showing data streams.",
+      "imageUrl": "https://picsum.photos/seed/jarvis-hero/1200/800",
+      "imageHint": "holographic interface"
     },
     {
       "id": "ai-avatar",
-      "description": "An abstract, friendly avatar for the AI assistant.",
-      "imageUrl": "https://picsum.photos/seed/seista-avatar/256/256",
-      "imageHint": "abstract friendly"
+      "description": "A glowing blue arc reactor, representing the AI's core.",
+      "imageUrl": "https://picsum.photos/seed/jarvis-avatar/256/256",
+      "imageHint": "arc reactor"
     }
   ]
 }

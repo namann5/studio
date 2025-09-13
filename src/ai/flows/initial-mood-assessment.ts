@@ -23,7 +23,7 @@ export type InitialMoodAssessmentInput = z.infer<typeof InitialMoodAssessmentInp
 const InitialMoodAssessmentOutputSchema = z.object({
   mood: z
     .string()
-    .describe('The assessed mood of the user (e.g., happy, sad, angry).'),
+    .describe('The assessed mood of the user (e.g., calm, agitated, stressed).'),
   transcription: z.string().describe("A transcription of the user's voice input."),
 });
 export type InitialMoodAssessmentOutput = z.infer<typeof InitialMoodAssessmentOutputSchema>;
@@ -37,7 +37,9 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
   input: {schema: z.object({ voiceInput: z.string() })},
   output: {schema: InitialMoodAssessmentOutputSchema},
   model: 'googleai/gemini-2.5-pro',
-  prompt: `Transcribe the following audio and assess the user's primary mood from their tone and words. Respond with only the mood and transcription.
+  prompt: `As J.A.R.V.I.S., analyze the following audio input. Transcribe the user's speech and perform a preliminary emotional state analysis based on vocal tone and content.
+
+Respond with only the assessed state and the transcription.
 
 Audio: {{media url=voiceInput mimeType='audio/webm'}}`,
 });
@@ -51,7 +53,7 @@ const initialMoodAssessmentFlow = ai.defineFlow(
   async input => {
     // Check for valid base64 data.
     if (!input.voiceInput || !input.voiceInput.startsWith('data:audio/webm;base64,') || input.voiceInput.split(',')[1].length === 0) {
-      console.error('Initial Mood Assessment: Invalid or empty voice input data URI.');
+      console.error('Initial State Analysis: Invalid or empty voice input data URI.');
       return {
         mood: 'unknown',
         transcription: '',
@@ -62,10 +64,10 @@ const initialMoodAssessmentFlow = ai.defineFlow(
       const {output} = await initialMoodAssessmentPrompt(input);
       return output!;
     } catch (error) {
-      console.error('Error during initial mood assessment prompt execution:', error);
+      console.error('Error during initial state analysis:', error);
       return {
         mood: 'error',
-        transcription: '',
+        transcription: 'Apologies, Sir. I seem to be having trouble with my audio processing sensors. Could you please repeat that?',
       };
     }
   }

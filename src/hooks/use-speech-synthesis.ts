@@ -46,7 +46,7 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const speak = useCallback((options: SpeechOptions) => {
         if (!supported || speaking) return;
 
-        const { text, rate = 1, pitch = 1.3, volume = 1, voice } = options;
+        const { text, rate = 1, pitch = 1, volume = 1, voice } = options;
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = rate;
@@ -56,11 +56,11 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         if (voice) {
             utterance.voice = voice;
         } else {
-            // Find a suitable female voice. This is more robust.
-            const femaleVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Female') || v.name.includes('Samantha') || v.name.includes('Zira')));
+            // Find a suitable male, UK English voice for Jarvis.
+            const jarvisVoice = voices.find(v => v.lang === 'en-GB' && v.name.includes('Male')) || voices.find(v => v.lang === 'en-GB') || voices.find(v => v.lang.startsWith('en') && v.name.includes('David')) || voices.find(v => v.lang.startsWith('en') && v.name.includes('Google UK English Male'));
             
-            if (femaleVoice) {
-                utterance.voice = femaleVoice;
+            if (jarvisVoice) {
+                utterance.voice = jarvisVoice;
             }
         }
         
