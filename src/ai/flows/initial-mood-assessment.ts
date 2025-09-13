@@ -41,7 +41,7 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
   output: {schema: InitialMoodAssessmentOutputSchema},
   prompt: `Analyze the user's voice input and determine their mood and transcribe the audio.
 
-Voice Input: {{media url=voiceInput}}
+Voice Input: {{media url=voiceInput mimeType='audio/webm'}}
 
 Respond with the mood, a confidence level (0-1), and a transcription of the audio. Mood should be a simple, single-word descriptor.
 Confidence should reflect how sure you are of the mood assessment, given the input.`, // Clear instructions for mood assessment
