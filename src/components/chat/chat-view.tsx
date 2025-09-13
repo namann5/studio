@@ -4,34 +4,37 @@ import { useState, useTransition, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, AlertTriangle, Play, Loader, Power, Mic } from "lucide-react";
+import { BrainCircuit, AlertTriangle, Loader, Mic, StopCircle } from "lucide-react";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { useVAD } from "@/hooks/use-vad";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionState, setSessionState] = useState<"idle" | "listening" | "processing" | "speaking">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("HELLO");
+  const [sessionState, setSessionState] = useState<"idle" | "recording" | "processing" | "speaking">("idle");
+  const [lastBotMessage, setLastBotMessage] = useState("Hello! I'm here to listen. Click the mic to start speaking.");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
   const { toast } = useToast();
   const [hasMicPermission, setHasMicPermission] = useState<boolean | null>(null);
   
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  
   const aiAvatar = PlaceHolderImages.find(img => img.id === 'ai-avatar');
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
       if (sessionState === 'speaking') {
-        setSessionState('listening');
+        setSessionState('idle');
       }
     },
   });
@@ -45,7 +48,7 @@ export function ChatView() {
       setSessionState("speaking");
     }
   }, [speak]);
-
+  
   const handleVoiceSubmit = useCallback((audioBlob: Blob) => {
     setSessionState("processing");
     startTransition(async () => {
@@ -78,12 +81,10 @@ export function ChatView() {
                 description: "There was an error generating a response.",
                 variant: "destructive"
               });
-              const errorResponse = "I'm sorry, I encountered an error trying to respond. Please try again.";
-              addMessage("assistant", errorResponse);
+              setSessionState("idle");
             }
           } else {
-            const errorResponse = "I'm sorry, I didn't catch that. Could you please say it again?";
-            addMessage("assistant", errorResponse);
+             addMessage("assistant", "I'm sorry, I didn't catch that. Could you please say it again?");
           }
         };
       } catch (error) {
@@ -93,106 +94,88 @@ export function ChatView() {
           description: "There was an issue processing your audio.",
           variant: "destructive"
         })
-        const errorResponse = "My apologies. I encountered an issue processing that. Please try again.";
-        addMessage("assistant", errorResponse);
+        addMessage("assistant", "My apologies. I encountered an issue processing that. Please try again.");
       }
     });
   }, [messages, addMessage, toast]);
 
 
-  const vad = useVAD({
-    onSpeechEnd: (audio) => {
-      handleVoiceSubmit(audio);
-    },
-    onVADMisfire: () => {
-      addMessage("assistant", "It seems I'm still not detecting any speech. Could you speak up?");
-    },
-    onError(error) {
-      console.error("VAD Error:", error);
-      setHasMicPermission(false);
-      setSessionState("idle");
-    },
-  });
+  const startRecording = async () => {
+    setHasMicPermission(null);
+    if (speaking) cancel();
 
-  const startConversation = async () => {
-    setHasMicPermission(null); // Reset permission state on each attempt
     try {
-      // Request permission and get a stream to check
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Stop the tracks immediately as we only needed to check permission
-      stream.getTracks().forEach(track => track.stop());
+      streamRef.current = stream;
       setHasMicPermission(true);
 
-      vad.start();
-      setSessionState("listening");
-      addMessage("assistant", "HELLO");
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        handleVoiceSubmit(audioBlob);
+      };
+
+      mediaRecorderRef.current.start();
+      setSessionState("recording");
+
     } catch (error) {
-      console.error("Microphone permission denied:", error);
+      console.error("Error accessing microphone:", error);
       setHasMicPermission(false);
+      setSessionState("idle");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+    }
+    setSessionState("processing"); 
+  };
+  
+  const handleMicButtonClick = () => {
+    if (sessionState === "recording") {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
   
-  const endConversation = () => {
-    if (speaking) cancel();
-    vad.stop();
-    setSessionState("idle");
-    setLastBotMessage("Session ended. Take care.");
-    setMessages([]);
-  }
-
-  const handleGetStrategies = () => {
-    if (speaking) cancel();
-    vad.pause();
-    setSessionState("processing");
-    startTransition(async () => {
-        try {
-            const strategies = await getCopingStrategies(messages, currentMood);
-            const strategyText = `Of course. Here are a few strategies that might be helpful:\n\n${strategies.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
-            addMessage("assistant", strategyText);
-        } catch (error) {
-            toast({
-              title: "Strategy Failed",
-              description: "Could not generate new strategies.",
-              variant: "destructive"
-            })
-            const errorResponse = "I'm sorry, I was unable to generate strategies at this moment. Please try again later.";
-            addMessage("assistant", errorResponse);
-        } finally {
-            if (sessionState !== 'idle') {
-                vad.start();
-                setSessionState('listening');
-            }
-        }
-    });
-  }
-  
   useEffect(() => {
-    if (speaking && sessionState !== 'speaking') {
-      setSessionState("speaking");
-    } else if (!speaking && sessionState === 'speaking') {
-      setSessionState('listening');
-      if (vad.listening) vad.start();
+    return () => {
+      if (speaking) cancel();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     }
-  }, [speaking, sessionState, vad]);
+  }, [speaking, cancel]);
+
 
   const isProcessing = sessionState === 'processing' || isPending;
   const isSpeaking = sessionState === 'speaking';
-  const isListening = sessionState === 'listening';
-  const isSessionActive = sessionState !== 'idle';
+  const isRecording = sessionState === 'recording';
   
   const getStatusText = () => {
     if (hasMicPermission === false) return "Microphone access is required. Please enable it in your browser settings.";
-    if (sessionState === 'idle') return "Press 'Begin Session' to start.";
     if (isProcessing) return "Processing...";
     if (isSpeaking) return lastBotMessage;
-    if (isListening) return "Listening...";
-    return "Ready."; // Fallback status
+    if (isRecording) return "Listening...";
+    return lastBotMessage;
   };
 
   const getAvatarClass = () => {
     if (isSpeaking) return "shadow-[0_0_40px_8px_hsl(var(--primary))]";
     if (isProcessing) return "scale-110 shadow-[0_0_50px_10px_hsl(var(--accent))] animate-pulse";
-    if (isListening) return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
+    if (isRecording) return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
     return "";
   };
 
@@ -218,7 +201,7 @@ export function ChatView() {
         </div>
 
         <div className="absolute top-0 right-0 p-4">
-            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isSessionActive || isProcessing || isSpeaking}>
+            <Button variant="outline" size="sm" onClick={() => {}} disabled={isRecording || isProcessing || isSpeaking}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
                 Coping Strategies
             </Button>
@@ -240,18 +223,14 @@ export function ChatView() {
         </div>
         
         <div className="absolute bottom-10 flex flex-col items-center gap-4">
-            {!isSessionActive ? (
-                <Button onClick={startConversation} size="lg" className="rounded-full">
-                    <Play className="mr-2" /> Begin Session
-                </Button>
-            ) : (
-              <div className="flex items-center gap-4">
-                 {isProcessing ? <Loader className="w-8 h-8 animate-spin text-primary" /> : <Mic className={cn("w-8 h-8", isListening ? 'text-primary' : 'text-muted-foreground')} />}
-                <Button onClick={endConversation} variant="destructive" size="lg" className="rounded-full">
-                    <Power className="mr-2" /> End Session
-                </Button>
-              </div>
-            )}
+            <Button 
+                onClick={handleMicButtonClick} 
+                size="lg" 
+                className="rounded-full w-24 h-24"
+                disabled={isProcessing || isSpeaking}
+            >
+                {isProcessing ? <Loader className="w-8 h-8 animate-spin" /> : (isRecording ? <StopCircle className="w-8 h-8" /> : <Mic className="w-8 h-8" />)}
+            </Button>
         </div>
       <SafetyAlertDialog open={showSafetyAlert} onOpenChange={setShowSafetyAlert} />
     </div>
@@ -281,5 +260,3 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
-
-    
