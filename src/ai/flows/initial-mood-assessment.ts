@@ -44,7 +44,27 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
 Voice Input: {{media url=voiceInput mimeType='audio/webm'}}
 
 Respond with the mood, a confidence level (0-1), and a transcription of the audio. Mood should be a simple, single-word descriptor.
-Confidence should reflect how sure you are of the mood assessment, given the input.`, // Clear instructions for mood assessment
+Confidence should reflect how sure you are of the mood assessment, given the input.`,
+  config: {
+    safetySettings: [
+      {
+        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+        threshold: 'BLOCK_NONE',
+      },
+      {
+        category: 'HARM_CATEGORY_HATE_SPEECH',
+        threshold: 'BLOCK_ONLY_HIGH',
+      },
+       {
+        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+       {
+        category: 'HARM_CATEGORY_HARASSMENT',
+        threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+      },
+    ],
+  },
 });
 
 const initialMoodAssessmentFlow = ai.defineFlow(
@@ -52,7 +72,6 @@ const initialMoodAssessmentFlow = ai.defineFlow(
     name: 'initialMoodAssessmentFlow',
     inputSchema: InitialMoodAssessmentInputSchema,
     outputSchema: InitialMoodAssessmentOutputSchema,
-    model: 'googleai/gemini-2.5-pro',
   },
   async input => {
     try {
