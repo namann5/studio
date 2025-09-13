@@ -40,7 +40,7 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
 
 Your response must be in the format specified by the output schema.
 
-Audio: {{media url=voiceInput mimeType='audio/webm'}}`,
+Audio: {{media url=voiceInput}}`,
 });
 
 const initialMoodAssessmentFlow = ai.defineFlow(
