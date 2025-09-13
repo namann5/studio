@@ -36,7 +36,6 @@ const initialMoodAssessmentPrompt = ai.definePrompt({
   name: 'initialMoodAssessmentPrompt',
   input: {schema: z.object({ voiceInput: z.string() })},
   output: {schema: InitialMoodAssessmentOutputSchema},
-  model: 'googleai/gemini-2.5-pro',
   prompt: `As J.A.R.V.I.S., analyze the following audio input. Transcribe the user's speech and perform a preliminary emotional state analysis based on vocal tone and content.
 
 Respond with only the assessed state and the transcription.
@@ -62,7 +61,10 @@ const initialMoodAssessmentFlow = ai.defineFlow(
 
     try {
       const {output} = await initialMoodAssessmentPrompt(input);
-      return output!;
+      if (!output) {
+        throw new Error('No output from AI model.');
+      }
+      return output;
     } catch (error) {
       console.error('Error during initial state analysis:', error);
       return {
