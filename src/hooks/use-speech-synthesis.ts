@@ -56,8 +56,11 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
         if (voice) {
             utterance.voice = voice;
         } else {
-            // Find a suitable voice for a sensei.
-            const senseiVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Male')) || voices.find(v => v.lang.startsWith('en') && v.name.includes('David')) || voices.find(v => v.lang.startsWith('en') && v.name.includes('Google US English'));
+            // Find a suitable voice for a wise sage.
+            const senseiVoice = 
+                voices.find(v => v.lang === 'en-US' && (v.name.includes('David') || v.name.includes('Mark'))) || 
+                voices.find(v => v.lang.startsWith('en') && v.name.includes('Male')) || 
+                voices.find(v => v.lang.startsWith('en') && v.name.includes('Google US English'));
             
             if (senseiVoice) {
                 utterance.voice = senseiVoice;

@@ -2,15 +2,15 @@
   "placeholderImages": [
     {
       "id": "hero-image",
-      "description": "A silhouette of a ninja standing on a cliff overlooking a village at sunset.",
-      "imageUrl": "https://picsum.photos/seed/nindo-hero/1200/800",
-      "imageHint": "ninja village"
+      "description": "A powerful ninja in a dynamic pose, channeling energy under a dramatic sky.",
+      "imageUrl": "https://picsum.photos/seed/nindo-hero-2/1200/800",
+      "imageHint": "ninja power"
     },
     {
       "id": "ai-avatar",
-      "description": "A stylized, glowing Konoha leaf symbol.",
-      "imageUrl": "https://picsum.photos/seed/nindo-avatar/256/256",
-      "imageHint": "leaf symbol"
+      "description": "A swirling vortex of blue energy, resembling a Rasengan.",
+      "imageUrl": "https://picsum.photos/seed/nindo-avatar-2/256/256",
+      "imageHint": "energy swirl"
     }
   ]
 }
