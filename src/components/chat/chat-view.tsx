@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import Image from "next/image";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, AlertTriangle, Play, Square } from "lucide-react";
-import { VoiceRecorder } from "./voice-recorder";
+import { BrainCircuit, AlertTriangle, Play, Square, Mic } from "lucide-react";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
@@ -24,15 +23,10 @@ export function ChatView() {
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
   
-  const voiceRecorderRef = useRef<{ startRecording: () => void; stopRecording: () => void }>(null);
-
-  const onSpeechEnd = () => {
-    if (sessionState === "active" && voiceRecorderRef.current) {
-      voiceRecorderRef.current.startRecording();
-    }
-  }
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   
-  const { speak, cancel, speaking } = useSpeechSynthesis({ onEnd: onSpeechEnd });
+  const { speak, cancel, speaking } = useSpeechSynthesis();
 
   const startConversation = () => {
     setSessionState("active");
@@ -40,12 +34,10 @@ export function ChatView() {
   };
   
   const endConversation = () => {
-      cancel();
-      if (voiceRecorderRef.current) {
-          voiceRecorderRef.current.stopRecording();
-      }
-      setSessionState("stopped");
-      setLastBotMessage("Our session has ended. Press 'Start' to begin again whenever you're ready.");
+    cancel();
+    stopRecording();
+    setSessionState("stopped");
+    setLastBotMessage("Our session has ended. Press 'Start' to begin again whenever you're ready.");
   }
 
   const addMessage = (role: "user" | "assistant", content: string) => {
@@ -55,9 +47,8 @@ export function ChatView() {
       setLastBotMessage(content);
     }
   };
-  
-  const handleVoiceSubmit = async (audioBlob: Blob) => {
-    setIsRecording(false);
+
+  const handleVoiceSubmit = (audioBlob: Blob) => {
     if (sessionState !== 'active') return;
 
     startTransition(async () => {
@@ -67,7 +58,8 @@ export function ChatView() {
             reader.onloadend = async () => {
                 const base64Audio = reader.result as string;
                 addMessage("user", "[Voice Input]");
-                const { mood, confidence, transcription } = await getInitialMood(base64Audio);
+                
+                const { mood, transcription } = await getInitialMood(base64Audio);
 
                 if (transcription) {
                   const lowercasedText = transcription.toLowerCase();
@@ -116,12 +108,45 @@ export function ChatView() {
         }
     });
   }
+  
+  const startRecording = async () => {
+    if (speaking) cancel();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setIsRecording(true);
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        handleVoiceSubmit(audioBlob);
+        audioChunksRef.current = [];
+        stream.getTracks().forEach(track => track.stop());
+      };
+      mediaRecorderRef.current.start();
+    } catch (error) {
+      console.error("Error accessing microphone", error);
+      toast({ title: "Microphone Error", description: "Could not access microphone.", variant: "destructive" });
+      setIsRecording(false);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
 
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
         <div className="relative w-64 h-64">
           <Image 
-            src="/seista.jpeg"
+            src="/seista.png"
             alt="AI Assistant"
             width={256}
             height={256}
@@ -156,11 +181,17 @@ export function ChatView() {
             )}
             {sessionState === "active" && (
                 <>
-                 <VoiceRecorder 
-                    ref={voiceRecorderRef}
-                    onAudioSubmit={handleVoiceSubmit} 
-                    onRecordingChange={setIsRecording}
-                 />
+                  <Button 
+                    size="icon"
+                    className="rounded-full w-20 h-20"
+                    onMouseDown={startRecording}
+                    onMouseUp={stopRecording}
+                    onTouchStart={startRecording}
+                    onTouchEnd={stopRecording}
+                    disabled={isPending || speaking}
+                  >
+                    <Mic className="w-8 h-8"/>
+                  </Button>
                  <Button onClick={endConversation} variant="destructive" size="sm">
                     <Square className="mr-2" /> End Conversation
                  </Button>

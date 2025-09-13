@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 type Props = {
   onAudioSubmit: (audioBlob: Blob) => void;
@@ -9,15 +10,21 @@ type Props = {
 
 export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecording: () => void; }, Props>(
   ({ onAudioSubmit, onRecordingChange }, ref) => {
+    const { toast } = useToast();
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
 
+    const cleanupStream = () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    }
+
     useEffect(() => {
         return () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-            }
+            cleanupStream();
         }
     }, []);
 
@@ -28,42 +35,49 @@ export const VoiceRecorder = forwardRef<{ startRecording: () => void; stopRecord
     };
 
     const startRecording = async () => {
+      if (mediaRecorderRef.current?.state === 'recording') {
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         streamRef.current = stream;
         onRecordingChange(true);
 
-        mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: "audio/webm" });
-        mediaRecorderRef.current.ondataavailable = (event) => {
+        const options = { mimeType: "audio/webm" };
+        const recorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = recorder;
+
+        recorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
             audioChunksRef.current.push(event.data);
           }
         };
 
-        mediaRecorderRef.current.onstop = () => {
+        recorder.onstop = () => {
           onRecordingChange(false);
           if(audioChunksRef.current.length > 0) {
             const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
             onAudioSubmit(audioBlob);
           }
           audioChunksRef.current = [];
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-          }
+          cleanupStream();
         };
-
-        mediaRecorderRef.current.start();
         
-        // Automatically stop recording after a set time to prevent indefinite recording
-        setTimeout(() => {
-          if (mediaRecorderRef.current?.state === 'recording') {
-            stopRecording();
-          }
-        }, 7000); // Stop after 7 seconds of recording
+        recorder.onerror = (event) => {
+            console.error("MediaRecorder error:", event);
+            onRecordingChange(false);
+            cleanupStream();
+        }
 
+        recorder.start();
+        
       } catch (err) {
         console.error("Error accessing microphone:", err);
+        toast({
+            title: "Microphone Error",
+            description: "Could not access microphone. Please check permissions.",
+            variant: "destructive"
+        })
         onRecordingChange(false);
       }
     };
