@@ -35,26 +35,27 @@ export function ChatView() {
   }, []);
 
   const handleAiResponse = useCallback(async (transcription: string) => {
-    const userMessage: Message = { id: 'temp-user', role: 'user', content: transcription, timestamp: new Date() };
-    const currentMessages = [...messages, userMessage];
-    
-    // Update the message list with the user's transcribed message
-    setMessages(currentMessages);
-
+    // Add user message first, so AI can respond to it
+    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
+    setMessages(prev => [...prev, userMessage]);
+  
+    // Now create the history for the AI, including the new user message
+    const currentHistory = [...messages, userMessage];
+  
     try {
-        const responseText = await getAiResponse(currentMessages, currentMood);
-        addMessage("assistant", responseText);
-        speak({ text: responseText });
+      const responseText = await getAiResponse(currentHistory, currentMood);
+      addMessage("assistant", responseText);
+      speak({ text: responseText });
     } catch(error) {
-        console.error("Error getting AI response:", error);
-        toast({
-          title: "Error",
-          description: "Could not get AI response.",
-          variant: "destructive"
-        })
-        const errorResponse = "Sorry, I'm having a little trouble thinking. Could you say that again?";
-        addMessage("assistant", errorResponse);
-        speak({ text: errorResponse });
+      console.error("Error getting AI response:", error);
+      toast({
+        title: "Error",
+        description: "Could not get AI response.",
+        variant: "destructive"
+      });
+      const errorResponse = "Sorry, I'm having a little trouble thinking. Could you say that again?";
+      addMessage("assistant", errorResponse);
+      speak({ text: errorResponse });
     }
   }, [messages, currentMood, addMessage]);
 
