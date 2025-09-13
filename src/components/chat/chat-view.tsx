@@ -1,36 +1,46 @@
 "use client";
 
-import { useState, useRef, useTransition, useCallback } from "react";
+import { useState, useRef, useTransition, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { Message } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { BrainCircuit, AlertTriangle, Play, Square, Mic } from "lucide-react";
+import { BrainCircuit, AlertTriangle, Play, Square, Mic, Bot } from "lucide-react";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { useVAD } from "@/hooks/use-vad";
 
 const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionState, setSessionState] = useState<"idle" | "active" | "stopped">("idle");
+  const [sessionState, setSessionState] = useState<"idle" | "listening" | "processing" | "speaking" | "stopped">("idle");
   const [lastBotMessage, setLastBotMessage] = useState("Greetings. I am your AI assistant. Speak, and I shall listen.");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
   const { toast } = useToast();
-  const [isRecording, setIsRecording] = useState(false);
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-
   const aiAvatar = PlaceHolderImages.find(img => img.id === 'ai-avatar');
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
-    onEnd: () => {},
+    onEnd: () => setSessionState(sessionState === 'speaking' ? 'listening' : 'idle'),
+  });
+
+  useEffect(() => {
+    if (speaking) {
+      setSessionState("speaking");
+    }
+  }, [speaking]);
+
+  const vad = useVAD({
+    onSpeechEnd: (audio) => {
+      handleVoiceSubmit(new Blob([audio], { type: 'audio/webm' }));
+    },
+    startOnLoad: false,
   });
 
   const addMessage = useCallback((role: "user" | "assistant", content: string) => {
@@ -67,21 +77,21 @@ export function ChatView() {
 
 
   const startConversation = () => {
-    setSessionState("active");
+    setSessionState("listening");
     speak({ text: lastBotMessage });
+    vad.start();
   };
   
   const endConversation = () => {
     cancel();
-    if(isRecording) {
-      stopRecording();
-    }
+    vad.pause();
     setSessionState("stopped");
     setLastBotMessage("Session ended. Have a good day.");
   }
 
   const handleVoiceSubmit = (audioBlob: Blob) => {
-    if (sessionState !== 'active') return;
+    if (sessionState !== 'listening') return;
+    setSessionState("processing");
 
     startTransition(async () => {
         try {
@@ -121,6 +131,7 @@ export function ChatView() {
 
   const handleGetStrategies = () => {
     if (speaking) cancel();
+    setSessionState("processing");
     startTransition(async () => {
         try {
             const strategies = await getCopingStrategies(messages, currentMood);
@@ -140,38 +151,21 @@ export function ChatView() {
     });
   }
   
-  const startRecording = async () => {
-    if (speaking) cancel();
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setIsRecording(true);
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      audioChunksRef.current = []; // Clear previous chunks
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        handleVoiceSubmit(audioBlob);
-        stream.getTracks().forEach(track => track.stop()); // Stop the stream tracks
-      };
-      mediaRecorderRef.current.start();
-    } catch (error) {
-      console.error("Error accessing microphone", error);
-      toast({ title: "Mic Error", description: "Could not access your microphone.", variant: "destructive" });
-      setIsRecording(false);
-    }
-  };
+  const isListening = sessionState === 'listening';
+  const isProcessing = sessionState === 'processing';
+  const isSpeaking = sessionState === 'speaking';
+  const userSpeaking = vad.userSpeaking;
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+  const getStatusText = () => {
+    if (isListening) {
+      return userSpeaking ? "Listening..." : "I am listening...";
     }
+    if (isProcessing) return "Processing...";
+    if (isSpeaking) return "Speaking...";
+    if (sessionState === 'stopped') return "Session ended.";
+    return lastBotMessage;
   };
-
+  
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-20"></div>
@@ -183,10 +177,12 @@ export function ChatView() {
               width={256}
               height={256}
               className={cn(
-                "rounded-full object-cover shadow-lg transition-all duration-500 ease-in-out",
-                speaking ? "scale-105 shadow-[0_0_40px_8px_hsl(var(--primary))]" : "scale-100 shadow-[0_0_20px_4px_hsl(var(--primary))]",
-                isRecording ? "scale-110 shadow-[0_0_60px_12px_hsl(var(--secondary))]" : "",
-                isPending ? "animate-pulse" : ""
+                "rounded-full object-cover shadow-lg transition-all duration-300 ease-in-out",
+                isSpeaking && "shadow-[0_0_40px_8px_hsl(var(--primary))]",
+                isListening && "shadow-[0_0_25px_4px_hsl(var(--secondary))]",
+                userSpeaking && "scale-105 shadow-[0_0_40px_8px_hsl(var(--secondary))]",
+                isProcessing && "scale-110 shadow-[0_0_50px_10px_hsl(var(--accent))]",
+                (isPending || isProcessing) && "animate-pulse"
               )}
               priority
               data-ai-hint={aiAvatar.imageHint}
@@ -195,7 +191,7 @@ export function ChatView() {
         </div>
 
         <div className="absolute top-0 right-0 p-4">
-            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={isPending || speaking || sessionState !== 'active'}>
+            <Button variant="outline" size="sm" onClick={handleGetStrategies} disabled={!isListening || isProcessing || isSpeaking}>
                 <BrainCircuit className="w-4 h-4 mr-2"/>
                 New Strategies
             </Button>
@@ -203,7 +199,7 @@ export function ChatView() {
 
         <div className="w-full max-w-2xl text-center px-4 mt-8 relative">
             <p className="text-lg md:text-xl text-primary/80 min-h-[6em] transition-opacity duration-300 font-mono">
-                {lastBotMessage}
+                {isListening || isProcessing || isSpeaking || sessionState === 'stopped' ? getStatusText() : lastBotMessage}
             </p>
         </div>
         
@@ -213,22 +209,14 @@ export function ChatView() {
                     <Play className="mr-2" /> Begin Session
                 </Button>
             )}
-            {sessionState === "active" && (
+            {(isListening || isProcessing || isSpeaking) && (
                 <>
-                  <Button 
-                    size="icon"
-                    className="rounded-full w-20 h-20 border-2 border-primary/50 bg-primary/20 text-primary hover:bg-primary/30"
-                    onMouseDown={startRecording}
-                    onMouseUp={stopRecording}
-                    onTouchStart={startRecording}
-                    onTouchEnd={stopRecording}
-                    disabled={isPending || speaking}
-                  >
-                    <Mic className="w-8 h-8"/>
-                  </Button>
-                 <Button onClick={endConversation} variant="destructive" size="sm">
+                  <div className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/20 text-primary">
+                    { isProcessing ? <Bot className="w-8 h-8 animate-spin" /> : <Mic className={cn("w-8 h-8", userSpeaking && "animate-pulse")}/> }
+                  </div>
+                  <Button onClick={endConversation} variant="destructive" size="sm">
                     <Square className="mr-2" /> End Session
-                 </Button>
+                  </Button>
                 </>
             )}
              {sessionState === "stopped" && (
