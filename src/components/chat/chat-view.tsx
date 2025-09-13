@@ -31,7 +31,6 @@ export function ChatView() {
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
-      // Transition from speaking back to listening, ready for user input.
       if (sessionState === 'speaking') {
         setSessionState('listening');
       }
@@ -44,7 +43,7 @@ export function ChatView() {
     if (role === "assistant") {
       setLastBotMessage(content);
       speak({ text: content });
-       if (content.startsWith("HELLO")) {
+      if (content.startsWith("HELLO")) {
         setSessionState("speaking");
       }
     }
@@ -72,70 +71,71 @@ export function ChatView() {
     });
   }, [messages, currentMood, addMessage, toast]);
   
-  const handleVoiceSubmit = (audioBlob: Blob) => {
+  const handleVoiceSubmit = useCallback((audioBlob: Blob) => {
     startTransition(async () => {
-        try {
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onloadend = async () => {
-                const base64Audio = reader.result as string;
-                
-                const { mood, transcription } = await getInitialMood(base64Audio);
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result as string;
+          
+          const { mood, transcription } = await getInitialMood(base64Audio);
 
-                if (transcription) {
-                  const lowercasedText = transcription.toLowerCase();
-                  if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
-                    setShowSafetyAlert(true);
-                  }
-                  setCurrentMood(mood);
-                  await handleAiResponse(transcription);
-                } else {
-                   // If transcription is empty, let the user know and go back to listening.
-                   const errorResponse = "I'm sorry, I didn't catch that. Could you please say it again?";
-                   addMessage("assistant", errorResponse);
-                }
-            };
-        } catch (error) {
-            console.error("Error Processing Voice", error);
-            toast({
-              title: "Audio Processing Error",
-              description: "There was an issue processing your audio.",
-              variant: "destructive"
-            })
-            const errorResponse = "My apologies. I encountered an issue processing that. Please try again.";
+          if (transcription) {
+            const lowercasedText = transcription.toLowerCase();
+            if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
+              setShowSafetyAlert(true);
+            }
+            setCurrentMood(mood);
+            await handleAiResponse(transcription);
+          } else {
+            const errorResponse = "I'm sorry, I didn't catch that. Could you please say it again?";
             addMessage("assistant", errorResponse);
-        }
-        // The onEnd callback in useSpeechSynthesis will handle the final transition to listening
+          }
+        };
+      } catch (error) {
+        console.error("Error Processing Voice", error);
+        toast({
+          title: "Audio Processing Error",
+          description: "There was an issue processing your audio.",
+          variant: "destructive"
+        })
+        const errorResponse = "My apologies. I encountered an issue processing that. Please try again.";
+        addMessage("assistant", errorResponse);
+      }
     });
-  }
+  }, [addMessage, handleAiResponse, toast]);
 
   const startRecording = async () => {
-    if (speaking) cancel(); 
+    if (speaking) cancel();
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
-      setSessionState("listening");
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
-      mediaRecorderRef.current.onstop = () => {
+      recorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        // Only submit if there's substantial audio data
+        audioChunksRef.current = [];
         if (audioBlob.size > 1000) { 
           handleVoiceSubmit(audioBlob);
         } else {
-          // If there's no real audio, just go back to listening state
           setSessionState('listening');
         }
-        audioChunksRef.current = [];
       };
 
-      mediaRecorderRef.current.start();
+      recorder.start();
+      setSessionState("listening");
+
     } catch (error) {
       console.error("Error accessing microphone:", error);
       toast({
@@ -157,8 +157,7 @@ export function ChatView() {
   };
   
   const startConversation = () => {
-    const greeting = "HELLO";
-    addMessage("assistant", greeting);
+    addMessage("assistant", "HELLO");
   };
   
   const endConversation = () => {
@@ -195,11 +194,9 @@ export function ChatView() {
   }
   
   useEffect(() => {
-    // Sync UI state with speech synthesis state
     if (speaking && sessionState !== 'speaking') {
       setSessionState("speaking");
     } else if (!speaking && sessionState === 'speaking') {
-      // When speech ends, go to listening
       setSessionState('listening');
     }
   }, [speaking, sessionState]);
