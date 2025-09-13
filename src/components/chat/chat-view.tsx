@@ -37,10 +37,10 @@ export function ChatView() {
   const handleAiResponse = useCallback(async (transcription: string) => {
     // Add user message first, so AI can respond to it
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
-    setMessages(prev => [...prev, userMessage]);
   
     // Now create the history for the AI, including the new user message
     const currentHistory = [...messages, userMessage];
+    setMessages(prev => [...prev, userMessage]); // Also update state immediately
   
     try {
       const responseText = await getAiResponse(currentHistory, currentMood);
@@ -176,7 +176,7 @@ export function ChatView() {
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
         <div className="relative w-64 h-64">
           <Image 
-            src="/seista-avatar.png"
+            src="/seista.webp"
             alt="AI Assistant"
             width={256}
             height={256}

@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { convertAudioToWav } from './convert-audio-to-wav';
 
 const InitialMoodAssessmentInputSchema = z.object({
   voiceInput: z
@@ -37,7 +38,7 @@ export async function assessInitialMood(input: InitialMoodAssessmentInput): Prom
 
 const initialMoodAssessmentPrompt = ai.definePrompt({
   name: 'initialMoodAssessmentPrompt',
-  input: {schema: InitialMoodAssessmentInputSchema},
+  input: {schema: z.object({ voiceInput: z.string() })},
   output: {schema: InitialMoodAssessmentOutputSchema},
   prompt: `Analyze the user's voice input and determine their mood and transcribe the audio.
 
@@ -55,7 +56,9 @@ const initialMoodAssessmentFlow = ai.defineFlow(
     model: 'googleai/gemini-2.5-pro',
   },
   async input => {
-    const {output} = await initialMoodAssessmentPrompt(input);
+    // Convert WebM to WAV before sending to the prompt
+    const wavAudio = await convertAudioToWav(input);
+    const {output} = await initialMoodAssessmentPrompt({ voiceInput: wavAudio.wavDataUri });
     return output!;
   }
 );
