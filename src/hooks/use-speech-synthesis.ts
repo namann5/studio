@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -24,6 +23,10 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const onEndRef = useRef(opts?.onEnd);
     const utteranceQueueRef = useRef<SpeechSynthesisUtterance[]>([]);
 
+    useEffect(() => {
+        onEndRef.current = opts?.onEnd;
+    }, [opts?.onEnd]);
+
     const populateVoiceList = useCallback(() => {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
             const newVoices = window.speechSynthesis.getVoices();
@@ -40,6 +43,7 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
 
         return () => {
             if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
                 window.speechSynthesis.onvoiceschanged = null;
             }
         }
@@ -64,52 +68,55 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
 
         const { text, rate = 1, pitch = 1, volume = 1, voice } = options;
         
-        // Cancel any previous speech to prevent overlap
         window.speechSynthesis.cancel();
         utteranceQueueRef.current = [];
 
         setSpeaking(true);
 
         const chunks: string[] = [];
-        let currentChunk = '';
+        let currentText = text;
 
-        const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
-
-        sentences.forEach(sentence => {
-            if ((currentChunk + sentence).length > MAX_TEXT_LENGTH) {
-                chunks.push(currentChunk);
-                currentChunk = sentence;
-            } else {
-                currentChunk += sentence;
+        if (text.length > MAX_TEXT_LENGTH) {
+            const sentences = text.match(/[^.!?]+[.!?]*|[^,]+,*/g) || [];
+            let currentChunk = "";
+            for (const sentence of sentences) {
+                if (currentChunk.length + sentence.length <= MAX_TEXT_LENGTH) {
+                    currentChunk += sentence;
+                } else {
+                    chunks.push(currentChunk);
+                    currentChunk = sentence;
+                }
             }
-        });
-        if (currentChunk) {
-            chunks.push(currentChunk);
+            if (currentChunk) {
+                chunks.push(currentChunk);
+            }
+        } else {
+            chunks.push(text);
         }
+        
 
         const preferredVoice = 
-            voices.find(v => v.lang === 'en-US' && v.name.includes('Google') && !v.name.includes('Male')) || 
-            voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) ||
-            voices.find(v => v.lang === 'en-US');
+            voice ||
+            voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) || 
+            voices.find(v => v.lang.startsWith('en') && v.name.includes('Microsoft')) ||
+            voices.find(v => v.lang.startsWith('en'));
 
         utteranceQueueRef.current = chunks.map(chunk => {
-            const utterance = new SpeechSynthesisUtterance(chunk);
+            const utterance = new SpeechSynthesisUtterance(chunk.trim());
             utterance.rate = rate;
             utterance.pitch = pitch;
             utterance.volume = volume;
             
-            if (voice) {
-                utterance.voice = voice;
-            } else if (preferredVoice) {
+            if (preferredVoice) {
                 utterance.voice = preferredVoice;
             }
 
             utterance.onend = processQueue;
             utterance.onerror = (event) => {
                 console.error('SpeechSynthesisUtterance.onerror', event);
-                // Clear queue and stop speaking on error
                 utteranceQueueRef.current = [];
                 setSpeaking(false);
+                processQueue(); // Try to process next chunk or end
             };
             return utterance;
         });
@@ -121,18 +128,9 @@ export const useSpeechSynthesis = (opts?: UseSpeechSynthesisOptions) => {
     const cancel = useCallback(() => {
         if (!supported) return;
         utteranceQueueRef.current = [];
-        setSpeaking(false);
         window.speechSynthesis.cancel();
-    }, [supported]);
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (supported) {
-                window.speechSynthesis.cancel();
-            }
-        };
+        setSpeaking(false);
     }, [supported]);
     
-    return { speak, cancel, speaking, supported };
+    return { speak, cancel, speaking, supported, voices };
 };

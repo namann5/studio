@@ -50,8 +50,8 @@ const initialMoodAssessmentFlow = ai.defineFlow(
     outputSchema: InitialMoodAssessmentOutputSchema,
   },
   async input => {
-    // Check for valid base64 data.
-    if (!input.voiceInput || !input.voiceInput.startsWith('data:audio/webm;base64,') || input.voiceInput.split(',')[1].length < 100) {
+    // Check for valid base64 data. A simple check for minimum length.
+    if (!input.voiceInput || !input.voiceInput.startsWith('data:audio/webm;base64,') || input.voiceInput.split(',')[1].length < 1000) {
       console.error('Initial State Analysis: Invalid or empty voice input data URI.');
       return {
         mood: 'unknown',
@@ -61,10 +61,10 @@ const initialMoodAssessmentFlow = ai.defineFlow(
 
     try {
       const {output} = await initialMoodAssessmentPrompt(input);
-      if (!output) {
-        console.error('Initial State Analysis: No output from AI model.');
+      if (!output || !output.transcription) {
+        console.error('Initial State Analysis: No valid output from AI model.');
         return {
-          mood: 'error',
+          mood: 'unknown',
           transcription: '',
         };
       }
