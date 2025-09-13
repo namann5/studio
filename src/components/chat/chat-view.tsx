@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useTransition, useCallback, useEffect } from "react";
@@ -27,6 +28,7 @@ export function ChatView() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const { speak, cancel, speaking } = useSpeechSynthesis({
     onEnd: () => {
@@ -43,13 +45,8 @@ export function ChatView() {
     if (role === "assistant") {
       setLastBotMessage(content);
       speak({ text: content });
-      // This is a specific fix to ensure that after the very first greeting,
-      // the app transitions to listening mode correctly.
-      if (messages.length === 0) {
-        setSessionState('speaking'); // Set to speaking for the greeting
-      }
     }
-  }, [speak, messages.length]);
+  }, [speak]);
 
   const handleAiResponse = useCallback(async (transcription: string) => {
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
@@ -113,10 +110,11 @@ export function ChatView() {
   }
 
   const startRecording = async () => {
-    if (speaking) cancel(); // Stop any ongoing speech before recording
-    setSessionState("listening"); // Immediately go to listening state
+    if (speaking) cancel(); 
+    setSessionState("listening");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       audioChunksRef.current = [];
 
@@ -133,7 +131,9 @@ export function ChatView() {
           // If there's no real audio, just go back to listening state
           setSessionState('listening');
         }
-        stream.getTracks().forEach(track => track.stop());
+        // Stop all tracks on the stream.
+        streamRef.current?.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       };
 
       mediaRecorderRef.current.start();
@@ -159,6 +159,8 @@ export function ChatView() {
   const startConversation = () => {
     const greeting = "Hello. I'm here to listen. Feel free to share what's on your mind.";
     addMessage("assistant", greeting);
+    // After greeting, immediately go to listening state
+    setSessionState('speaking');
   };
   
   const endConversation = () => {
@@ -198,10 +200,13 @@ export function ChatView() {
     // Sync UI state with speech synthesis state
     if (speaking && sessionState !== 'speaking') {
       setSessionState("speaking");
+    } else if (!speaking && sessionState === 'speaking') {
+      // When speech ends, go to listening
+      setSessionState('listening');
     }
   }, [speaking, sessionState]);
 
-  const isRecording = mediaRecorderRef.current?.state === 'recording';
+  const isRecording = sessionState === 'listening' && mediaRecorderRef.current?.state === 'recording';
   const isProcessing = sessionState === 'processing' || isPending;
   const isSpeaking = sessionState === 'speaking';
   const isSessionActive = sessionState !== 'idle';
@@ -221,6 +226,14 @@ export function ChatView() {
     if (isRecording) return "scale-105 shadow-[0_0_25px_4px_hsl(var(--secondary))]";
     return "";
   };
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else if (sessionState === 'listening') {
+      startRecording();
+    }
+  }
 
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-background relative overflow-hidden">
@@ -264,7 +277,7 @@ export function ChatView() {
             ) : (
               <div className="flex items-center gap-4">
                 <Button 
-                  onClick={isRecording ? stopRecording : startRecording} 
+                  onClick={handleMicClick}
                   size="icon" 
                   className="rounded-full w-16 h-16"
                   disabled={isProcessing || isSpeaking}
@@ -305,3 +318,5 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
+
+    
