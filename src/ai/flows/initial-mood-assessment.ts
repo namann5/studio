@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { convertAudioToWav } from './convert-audio-to-wav';
 
 const InitialMoodAssessmentInputSchema = z.object({
   voiceInput: z
@@ -56,30 +55,25 @@ const initialMoodAssessmentFlow = ai.defineFlow(
     model: 'googleai/gemini-2.5-pro',
   },
   async input => {
-    let wavAudio;
     try {
-      // Convert WebM to WAV before sending to the prompt
-      wavAudio = await convertAudioToWav(input);
+      if (!input.voiceInput || !input.voiceInput.split(',')[1]) {
+        console.error('Initial Mood Assessment: Invalid voice input data URI.');
+        return {
+          mood: 'unknown',
+          confidence: 0,
+          transcription: '',
+        };
+      }
+      const {output} = await initialMoodAssessmentPrompt(input);
+      return output!;
     } catch (error) {
-      console.error('Audio conversion failed:', error);
+      console.error('Error during initial mood assessment flow:', error);
+      // Return a default error response to prevent app crashes.
       return {
         mood: 'unknown',
         confidence: 0,
         transcription: '',
       };
     }
-    
-    // If conversion failed, wavDataUri will be empty.
-    if (!wavAudio.wavDataUri || !wavAudio.wavDataUri.split(',')[1]) {
-      // Return a response indicating failure.
-      return {
-        mood: 'unknown',
-        confidence: 0,
-        transcription: '',
-      };
-    }
-
-    const {output} = await initialMoodAssessmentPrompt({ voiceInput: wavAudio.wavDataUri });
-    return output!;
   }
 );
