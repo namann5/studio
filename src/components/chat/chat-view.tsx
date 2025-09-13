@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useTransition, useCallback, useEffect } from "react";
@@ -138,7 +137,7 @@ export function ChatView() {
         audioChunksRef.current = [];
       };
 
-      mediaRecorder-ref.current.start();
+      mediaRecorderRef.current.start();
     } catch (error) {
       console.error("Error accessing microphone:", error);
       toast({
@@ -319,7 +318,3 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
         </AlertDialog>
     );
 }
-
-    
-
-    
