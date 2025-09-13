@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "mkdir -p public && cp node_modules/@ricky0123/vad-web/dist/vad.worklet.bundle.min.js public/ && cp node_modules/@ricky0123/vad-web/dist/silero_vad.onnx public/"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
