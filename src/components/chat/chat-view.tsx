@@ -17,7 +17,7 @@ const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<"idle" | "listening" | "processing" | "speaking">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("Hello. I'm here to listen. Feel free to share what's on your mind.");
+  const [lastBotMessage, setLastBotMessage] = useState("HELLO");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -44,7 +44,7 @@ export function ChatView() {
     if (role === "assistant") {
       setLastBotMessage(content);
       speak({ text: content });
-       if (content.startsWith("Hello")) {
+       if (content.startsWith("HELLO")) {
         setSessionState("speaking");
       }
     }
@@ -159,7 +159,7 @@ export function ChatView() {
   };
   
   const startConversation = () => {
-    const greeting = "Hello. I'm here to listen. Feel free to share what's on your mind.";
+    const greeting = "HELLO";
     addMessage("assistant", greeting);
   };
   
