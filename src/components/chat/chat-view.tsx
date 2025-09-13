@@ -73,8 +73,6 @@ export function ChatView() {
   }, [messages, currentMood, addMessage, toast]);
   
   const handleVoiceSubmit = (audioBlob: Blob) => {
-    setSessionState("processing");
-
     startTransition(async () => {
         try {
             const reader = new FileReader();
@@ -151,10 +149,10 @@ export function ChatView() {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      setSessionState("processing"); 
       mediaRecorderRef.current.stop();
       streamRef.current?.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-      setSessionState("processing"); 
     }
   };
   
