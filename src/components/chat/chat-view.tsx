@@ -34,6 +34,16 @@ export function ChatView() {
     },
   });
 
+  const addMessage = useCallback((role: "user" | "assistant", content: string) => {
+    const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
+    setMessages(prev => [...prev, newMessage]);
+    if (role === "assistant") {
+      setLastBotMessage(content);
+      speak({ text: content });
+      setSessionState("speaking");
+    }
+  }, [speak]);
+
   const handleVoiceSubmit = useCallback((audioBlob: Blob) => {
     setSessionState("processing");
     startTransition(async () => {
@@ -105,16 +115,6 @@ export function ChatView() {
       setSessionState("idle");
     },
   });
-
-  const addMessage = useCallback((role: "user" | "assistant", content: string) => {
-    const newMessage = { id: Date.now().toString(), role, content, timestamp: new Date() };
-    setMessages(prev => [...prev, newMessage]);
-    if (role === "assistant") {
-      setLastBotMessage(content);
-      speak({ text: content });
-      setSessionState("speaking");
-    }
-  }, [speak]);
 
   const startConversation = () => {
     vad.start();
