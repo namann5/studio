@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { MoodChart } from "./mood-chart";
 import { Bot, User } from "lucide-react";
+import { MoodLogger } from "./mood-logger";
+import { Rewards } from "./rewards";
+import { MoodEntry } from "@/lib/types";
 
 // Mock data
-const moodData = [
+const initialMoodData: MoodEntry[] = [
     { date: "Mon", mood: 7 },
     { date: "Tue", mood: 5 },
     { date: "Wed", mood: 6 },
@@ -36,6 +40,25 @@ const conversationHistory = [
 ];
 
 export function DashboardView() {
+  const [moodData, setMoodData] = useState<MoodEntry[]>(initialMoodData);
+
+  const handleMoodLog = (newMood: number) => {
+    const today = new Date();
+    const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'short' });
+    
+    setMoodData(currentData => {
+        const existingEntryIndex = currentData.findIndex(d => d.date === dayOfWeek);
+        if (existingEntryIndex > -1) {
+            const updatedData = [...currentData];
+            updatedData[existingEntryIndex] = { ...updatedData[existingEntryIndex], mood: newMood };
+            return updatedData;
+        } else {
+            // This case is simplified; in a real app, you'd manage dates more robustly
+            return [...currentData.slice(-6), { date: dayOfWeek, mood: newMood }];
+        }
+    });
+  };
+
   return (
     <div className="h-screen flex flex-col">
         <header className="p-4 border-b flex items-center bg-background">
@@ -43,15 +66,20 @@ export function DashboardView() {
         </header>
 
         <div className="flex-1 overflow-auto p-4 md:p-8 space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Weekly Mood Trends</CardTitle>
-                    <CardDescription>A visualization of your emotional wellness over the past week.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <MoodChart data={moodData} />
-                </CardContent>
-            </Card>
+            <div className="grid gap-8 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Weekly Mood Trends</CardTitle>
+                        <CardDescription>A visualization of your emotional wellness over the past week.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <MoodChart data={moodData} />
+                    </CardContent>
+                </Card>
+                <MoodLogger onMoodLog={handleMoodLog} />
+            </div>
+            
+            <Rewards />
 
             <Card>
                 <CardHeader>

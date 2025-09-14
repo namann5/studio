@@ -7,18 +7,19 @@ import { Button } from "@/components/ui/button";
 import { BrainCircuit, AlertTriangle, Loader, Mic, StopCircle } from "lucide-react";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { getAiResponse, getCopingStrategies, getInitialMood } from "@/lib/actions";
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import Link from "next/link";
 
-const safetyKeywords = ["suicide", "kill myself", "harm myself", "end my life", "hopeless"];
+const safetyKeywords = ["suicide", "kill", "harm myself", "end my life", "hopeless"];
 
 export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionState, setSessionState] = useState<"idle" | "recording" | "processing" | "speaking">("idle");
-  const [lastBotMessage, setLastBotMessage] = useState("Hello! I'm here to listen. Click the mic to start speaking.");
+  const [lastBotMessage, setLastBotMessage] = useState("HELLO");
   const [currentMood, setCurrentMood] = useState("calm");
   const [isPending, startTransition] = useTransition();
   const [showSafetyAlert, setShowSafetyAlert] = useState(false);
@@ -58,32 +59,36 @@ export function ChatView() {
         reader.onloadend = async () => {
           const base64Audio = reader.result as string;
           
-          const { mood, transcription } = await getInitialMood(base64Audio);
+          try {
+            const { mood, transcription } = await getInitialMood(base64Audio);
 
-          if (transcription) {
-            const lowercasedText = transcription.toLowerCase();
-            if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
-              setShowSafetyAlert(true);
-            }
-            setCurrentMood(mood);
-            
-            const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
-            const currentHistory = [...messages, userMessage];
-            setMessages(prev => [...prev, userMessage]);
+            if (transcription) {
+              const lowercasedText = transcription.toLowerCase();
+              if (safetyKeywords.some(keyword => lowercasedText.includes(keyword))) {
+                setShowSafetyAlert(true);
+              }
+              setCurrentMood(mood);
+              
+              const userMessage: Message = { id: Date.now().toString(), role: 'user', content: transcription, timestamp: new Date() };
+              const currentHistory = [...messages, userMessage];
+              setMessages(prev => [...prev, userMessage]);
 
-            try {
-              const responseText = await getAiResponse(currentHistory, mood);
-              addMessage("assistant", responseText);
-            } catch(error) {
-              console.error("Error getting AI response:", error);
-              toast({
-                title: "Response Error",
-                description: "There was an error generating a response.",
-                variant: "destructive"
-              });
-              setSessionState("idle");
+              try {
+                const responseText = await getAiResponse(currentHistory, mood);
+                addMessage("assistant", responseText);
+              } catch(error) {
+                console.error("Error getting AI response:", error);
+                toast({
+                  title: "Response Error",
+                  description: "There was an error generating a response.",
+                  variant: "destructive"
+                });
+                setSessionState("idle");
+              }
+            } else {
+               addMessage("assistant", "I'm sorry, I didn't catch that. Could you please say it again?");
             }
-          } else {
+          } catch(e) {
              addMessage("assistant", "I'm sorry, I didn't catch that. Could you please say it again?");
           }
         };
@@ -102,54 +107,39 @@ export function ChatView() {
 
   const startRecording = async () => {
     if (speaking) cancel();
-
-    if (!hasMicPermission) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-            setHasMicPermission(true);
-        } catch (error) {
-            console.error("Error accessing microphone:", error);
-            setHasMicPermission(false);
-            setSessionState("idle");
-            return;
-        }
-    }
-    
-    // Ensure we have a stream before proceeding
-    if (!streamRef.current) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-            setHasMicPermission(true);
-        } catch (error) {
-            console.error("Error accessing microphone:", error);
-            setHasMicPermission(false);
-            setSessionState("idle");
-            return;
-        }
-    }
-
     setSessionState("recording");
 
-    mediaRecorderRef.current = new MediaRecorder(streamRef.current);
-    audioChunksRef.current = [];
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current = stream;
+        setHasMicPermission(true);
 
-    mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-    };
+        mediaRecorderRef.current = new MediaRecorder(streamRef.current);
+        audioChunksRef.current = [];
 
-    mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        handleVoiceSubmit(audioBlob);
-        // Stop all tracks on the stream
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        }
-    };
+        mediaRecorderRef.current.ondataavailable = (event) => {
+            audioChunksRef.current.push(event.data);
+        };
 
-    mediaRecorderRef.current.start();
+        mediaRecorderRef.current.onstop = () => {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+            handleVoiceSubmit(audioBlob);
+            
+            // Ensure stream is fully stopped
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+                streamRef.current = null;
+            }
+        };
+
+        mediaRecorderRef.current.start();
+
+    } catch (error) {
+        console.error("Error accessing microphone:", error);
+        setHasMicPermission(false);
+        setSessionState("idle");
+        return;
+    }
   };
 
   const stopRecording = () => {
@@ -159,11 +149,24 @@ export function ChatView() {
     setSessionState("processing"); 
   };
   
-  const handleMicButtonClick = () => {
+  const handleMicButtonClick = async () => {
     if (sessionState === "recording") {
       stopRecording();
     } else {
-      startRecording();
+      if (hasMicPermission === null) {
+        try {
+          // Request permission
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(track => track.stop()); // Stop the tracks immediately, we'll start a new stream in startRecording
+          setHasMicPermission(true);
+          startRecording();
+        } catch (error) {
+          console.error("Microphone permission denied:", error);
+          setHasMicPermission(false);
+        }
+      } else if (hasMicPermission) {
+        startRecording();
+      }
     }
   };
   
@@ -223,6 +226,15 @@ export function ChatView() {
                 Coping Strategies
             </Button>
         </div>
+        
+        <div className="absolute top-4 left-4">
+            <Button variant="outline" size="sm" asChild>
+                <Link href="/dashboard">
+                    <BrainCircuit className="w-4 h-4 mr-2"/>
+                    Dashboard
+                </Link>
+            </Button>
+        </div>
 
         <div className="w-full max-w-2xl text-center px-4 mt-8 relative">
             <p className="text-lg md:text-xl text-primary/80 min-h-[4em] transition-opacity duration-300 font-mono">
@@ -244,7 +256,7 @@ export function ChatView() {
                 onClick={handleMicButtonClick} 
                 size="lg" 
                 className="rounded-full w-24 h-24"
-                disabled={isProcessing || isSpeaking}
+                disabled={isProcessing || isSpeaking || hasMicPermission === false}
             >
                 {isProcessing ? <Loader className="w-8 h-8 animate-spin" /> : (isRecording ? <StopCircle className="w-8 h-8" /> : <Mic className="w-8 h-8" />)}
             </Button>
@@ -264,14 +276,17 @@ function SafetyAlertDialog({ open, onOpenChange }: { open: boolean, onOpenChange
                         Important Alert
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        It sounds like you are in significant distress. Please know that help is available. You can connect with a crisis support line to talk to someone. You do not have to go through this alone.
+                        It sounds like you are in significant distress. For immediate help, please call 911. You can also connect with a crisis support line to talk to someone. You do not have to go through this alone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
+                <AlertDialogFooter className="sm:justify-center">
+                    <AlertDialogAction asChild className="bg-red-600 hover:bg-red-700">
+                        <a href="tel:911">Call 911</a>
+                    </AlertDialogAction>
                     <AlertDialogAction asChild>
                         <a href="tel:988">Contact Support: 988</a>
                     </AlertDialogAction>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>Dismiss</Button>
+                    <AlertDialogCancel>Dismiss</AlertDialogCancel>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
