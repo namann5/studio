@@ -1,5 +1,5 @@
-# Firebase Studio
+#YOUTHMIND AI
 
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
+YouthMind AI is a next-generation mental wellness platform for adolescents. It delivers real-time
+ emotional support and proactive crisis prevention through an intelligent conversation engine trained
+ on adolescent communication patterns.
