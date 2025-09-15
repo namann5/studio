@@ -1,7 +1,13 @@
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {children}
+      <AppSidebar />
+      <SidebarInset>
+        {children}
+      </SidebarInset>
     </>
   );
 }
