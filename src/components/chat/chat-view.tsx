@@ -48,7 +48,7 @@ export function ChatView() {
       speak({ text: content });
       setSessionState("speaking");
     }
-  }, [speak]);
+  }, [speak, setMessages, setLastBotMessage, setSessionState]);
   
   const handleVoiceSubmit = useCallback((audioBlob: Blob) => {
     setSessionState("processing");
@@ -122,7 +122,7 @@ export function ChatView() {
         };
 
         mediaRecorderRef.current.onstop = () => {
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
             handleVoiceSubmit(audioBlob);
             
             // Ensure stream is fully stopped
@@ -153,7 +153,7 @@ export function ChatView() {
     if (sessionState === "recording") {
       stopRecording();
     } else {
-      if (hasMicPermission === null) {
+      if (hasMicPermission === null || hasMicPermission === false) {
         try {
           // Request permission
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -256,7 +256,7 @@ export function ChatView() {
                 onClick={handleMicButtonClick} 
                 size="lg" 
                 className="rounded-full w-24 h-24"
-                disabled={isProcessing || isSpeaking || hasMicPermission === false}
+                disabled={isProcessing || isSpeaking}
             >
                 {isProcessing ? <Loader className="w-8 h-8 animate-spin" /> : (isRecording ? <StopCircle className="w-8 h-8" /> : <Mic className="w-8 h-8" />)}
             </Button>
